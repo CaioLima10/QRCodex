@@ -1,0 +1,65 @@
+name: Build & Release QRCodeApp
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+
+    steps:
+      # 1️⃣ Pegar o código
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ Configurar Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      # 3️⃣ Instalar dependências
+      - name: Install dependencies
+        run: npm install
+
+      # 4️⃣ Build do Electron
+      - name: Build Electron App
+        run: npm run build
+        # Ajuste para o comando que você usa para gerar o build
+
+      # 5️⃣ Coletar arquivos gerados
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: QRCodeApp-${{ matrix.os }}
+          path: dist/
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build-and-release
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.0.0  # Atualize a cada versão
+          name: QRCodeApp v1.0.0
+          body: "Versão automática gerada pelo GitHub Actions."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./dist/**/* 
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

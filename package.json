@@ -43,7 +43,7 @@
         "portable",
         "zip"
       ],
-      "icon": "build/app.ico",
+      "icon": "logo.png",
       "signAndEditExecutable": false
     },
     "linux": {
@@ -63,8 +63,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "installerIcon": "build/app.ico",
-      "uninstallerIcon": "build/app.ico"
+      "installerIcon": "logo.png",
+      "uninstallerIcon": "logo.png"
     }
   }
 }

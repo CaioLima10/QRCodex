@@ -47,6 +47,7 @@
       "signAndEditExecutable": false
     },
     "linux": {
+      "maintainer": "Caio",
       "target": [
         "AppImage",
         "deb"

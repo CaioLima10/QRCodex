@@ -1,0 +1,24 @@
+# Dependências
+node_modules
+
+# Builds do Electron que não queremos subir
+dist
+*.exe
+*.dll
+*.pak
+*.dmg
+*.AppImage
+*.zip
+
+# Ignorar tudo dentro da pasta build EXCETO ícones e logo
+build/*
+!build/*.png
+!build/*.ico
+!build/*.icns
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*

@@ -1,0 +1,69 @@
+{
+  "name": "qrcodeapp",
+  "version": "1.0.0",
+  "description": "QR Code Generator",
+  "author": "Caio",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "node scripts/run-electron-builder.js",
+    "win": "node scripts/run-electron-builder.js --win",
+    "linux": "node scripts/run-electron-builder.js --linux",
+    "mac": "node scripts/run-electron-builder.js --mac",
+    "dist": "node scripts/run-electron-builder.js --dir"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.3"
+  },
+  "devDependencies": {
+    "electron": "^40.8.0",
+    "electron-builder": "^26.8.1",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5"
+  },
+  "build": {
+    "appId": "com.qrcode.app",
+    "productName": "QRCodeApp",
+    "toolsets": {
+      "winCodeSign": "1.1.0"
+    },
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!node_modules/.bin",
+      "!**/*.map"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable",
+        "zip"
+      ],
+      "icon": "build/app.ico",
+      "signAndEditExecutable": false
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/logo.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/app.icns"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "build/app.ico",
+      "uninstallerIcon": "build/app.ico"
+    }
+  }
+}

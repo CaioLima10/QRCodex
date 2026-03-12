@@ -1,0 +1,3813 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sublime CIA QRCode Generator</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@melloware/coloris/dist/coloris.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@melloware/coloris/dist/coloris.min.js"></script>
+
+  <script src="https://unpkg.com/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
+  <script>
+    // ================================
+    // SMART AUTO REFRESH (debounce)
+    // ================================
+    let qrRefreshTimeout;
+
+    function disabledRefreshQR() {
+      clearTimeout(qrRefreshTimeout);
+
+      qrRefreshTimeout = setTimeout(() => {
+        autoUpdate();
+      }, 180);
+    }
+
+    // auto refresh when user changes anything
+    window.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('input,select,textarea').forEach(el => {
+        el.addEventListener('input', disabledRefreshQR);
+        el.addEventListener('change', disabledRefreshQR);
+      });
+    });
+  </script>
+
+
+  <style>
+    /* ============================================================
+       CSS REFATORADO (PRODUÇÃO) — Tokens + Temas consistentes
+       Objetivo: impedir que Light Mode "herde" Dark (hovers/bg/etc)
+       ============================================================ */
+
+    /* =========================
+       VARIÁVEIS (DESIGN TOKENS)
+       ========================= */
+
+    :root {
+      color-scheme: dark;
+
+      --bg-body: #0a0b0d;
+      --bg-app: #121418;
+      --bg-sidebar: #16181d;
+      --bg-surface: #171a20;
+      --bg-input: #1d2127;
+      --bg-overlay: rgba(0, 0, 0, 0.70);
+      --bg-modal: rgba(22, 24, 30, 0.92);
+
+      --border-main: #2c3138;
+      --border-soft: rgba(255, 255, 255, 0.10);
+
+      --text-main: #f0f2f5;
+      --text-muted: #8b949e;
+      --text-contrast: #0b0d10;
+
+      --accent-main: #e6c55a;
+      --accent-soft: rgba(230, 197, 90, 0.16);
+      --accent-hover: #f2d470;
+
+      --danger: #ff4d4f;
+      --success: #22c55e;
+
+      --shadow-main: rgba(0, 0, 0, 0.60);
+      --shadow-soft: rgba(0, 0, 0, 0.28);
+      --bg-glass: rgba(18, 20, 24, 0.72);
+      --footer-fade: rgba(139, 148, 158, 0.65);
+
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+
+      --transition: 0.3s ease;
+      --focus-ring: 0 0 0 4px var(--accent-soft);
+
+      /* Compat: variáveis usadas no CSS legado */
+      --bg-dark: var(--bg-surface);
+      --text-dark: var(--text-contrast);
+      --accent-gold: var(--accent-main);
+      --qr-bg: var(--bg-input);
+      --bg-preloader: var(--bg-body);
+      --border-soft2: var(--border-soft);
+    }
+
+    [data-theme="light"] {
+      color-scheme: light;
+
+      --bg-body: #f0f2f5;
+      --bg-app: #ffffff;
+      --bg-sidebar: #ffffff;
+      --bg-surface: #f6f7fb;
+      --bg-input: #f8fafc;
+      --bg-overlay: rgba(2, 6, 23, 0.45);
+      --bg-modal: rgba(255, 255, 255, 0.96);
+
+      --border-main: #d1d5db;
+      --border-soft: rgba(2, 6, 23, 0.10);
+
+      --text-main: #111827;
+      --text-muted: #64748b;
+      --text-contrast: #ffffff;
+
+      --accent-main: #d4af37;
+      --accent-soft: rgba(212, 175, 55, 0.18);
+      --accent-hover: #c39b1e;
+
+      --shadow-main: rgba(2, 6, 23, 0.12);
+      --shadow-soft: rgba(2, 6, 23, 0.10);
+      --bg-glass: rgba(255, 255, 255, 0.82);
+      --footer-fade: rgba(100, 116, 139, 0.60);
+    }
+
+    /* =========================
+       RESET / BASE
+       ========================= */
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      padding: 30px;
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text-main);
+      background: var(--bg-body);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    :focus {
+      outline: none;
+    }
+
+    :focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+
+    /* =========================
+       LAYOUT
+       ========================= */
+
+    .app {
+      width: 1320px;
+      max-width: 98%;
+      background: var(--bg-app);
+      border: 1px solid var(--border-main);
+      border-radius: var(--radius-lg);
+      display: grid;
+      grid-template-columns: 540px 1fr;
+      overflow: hidden;
+      box-shadow: 0 40px 120px var(--shadow-main);
+    }
+
+    .sidebar {
+      padding: 30px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-soft);
+      overflow: auto;
+      max-height: 90vh;
+      position: relative;
+    }
+
+    .preview {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      background: var(--bg-app);
+    }
+
+    .container-section {
+      display: flex;
+      width: 100%;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 16px;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        max-height: unset;
+      }
+    }
+
+    /* =========================
+       SCROLLBAR
+       ========================= */
+
+    ::-webkit-scrollbar {
+      width: 10px;
+      background-color: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background-color: var(--accent-main);
+      border-radius: 999px;
+      border: 3px solid transparent;
+      background-clip: content-box;
+    }
+
+    /* =========================
+       PRELOADER
+       ========================= */
+
+    #preloader {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-body);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100000;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+
+    body.loaded #preloader {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .loader-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .loader-box h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-main);
+      letter-spacing: 0.2px;
+    }
+
+    .loader-box p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .logo {
+      width: 90px;
+      margin-bottom: 10px;
+      animation: pulseLogo 2s infinite ease-in-out;
+      filter: drop-shadow(0 10px 24px var(--shadow-soft));
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border-soft);
+      border-top: 3px solid var(--accent-main);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes pulseLogo {
+
+      0%,
+      100% {
+        opacity: 0.65;
+        transform: scale(0.96);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* =========================
+       ELEMENTOS GERAIS
+       ========================= */
+
+    .box-img {
+      display: flex;
+      gap: 20px;
+      padding: 4px 0 16px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: transparent;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 650;
+      margin-bottom: 12px;
+      letter-spacing: -0.2px;
+    }
+
+    .logo-suplime {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    /* =========================
+       FORM / INPUTS
+       ========================= */
+
+    label {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 650;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0 0 6px 4px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      height: 48px;
+      padding: 0 18px;
+      margin: 0 0 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 500;
+      transition: border-color var(--transition), box-shadow var(--transition), background var(--transition), transform var(--transition);
+      appearance: none;
+    }
+
+    input:hover,
+    select:hover {
+      border-color: var(--border-main);
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--accent-main);
+      box-shadow: var(--focus-ring);
+    }
+
+    input[type="number"] {
+      padding-right: 14px;
+    }
+
+    input[type="color"] {
+      padding: 0;
+      height: 48px;
+      width: 52px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      border: 1px solid var(--border-soft);
+      background: transparent;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    .clr-field {
+      width: 100%;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: var(--bg-input);
+      color: var(--text-main);
+    }
+
+    /* =========================
+       TABS
+       ========================= */
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 10px;
+      font-size: 11px;
+      font-weight: 650;
+      border-radius: 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-soft);
+      color: var(--text-muted);
+      text-align: center;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+      transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition);
+    }
+
+    .tab:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-main);
+      color: var(--accent-main);
+      transform: translateY(-1px);
+    }
+
+    .tab.active {
+      background: var(--accent-main);
+      border-color: var(--accent-main);
+      color: var(--text-contrast);
+    }
+
+    /* =========================
+       CONTROLES DE COR
+       ========================= */
+
+    .colorControl {
+      margin-bottom: 15px;
+    }
+
+    .colorPicker {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+    }
+
+    .color-hex {
+      flex: 1;
+      height: 48px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      text-align: center;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition), background var(--transition);
+      margin: 0;
+      padding: 0 14px;
+    }
+
+    .color-hex:hover {
+      border-color: var(--accent-main);
+      transform: translateY(-1px);
+    }
+
+    .btn-action-modern {
+      width: 48px;
+      height: 48px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition), box-shadow var(--transition);
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .btn-action-modern:hover {
+      background: var(--accent-main);
+      border-color: var(--accent-main);
+      color: var(--text-contrast);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px var(--shadow-soft);
+    }
+
+    .btn-action-modern:active {
+      transform: translateY(-1px) scale(0.98);
+    }
+
+    /* =========================
+       CHECKBOX
+       ========================= */
+
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .checkbox input {
+      margin: 0;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent-main);
+    }
+
+    /* =========================
+       BOTÕES
+       ========================= */
+
+    button {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      background: var(--accent-main);
+      color: var(--text-contrast);
+      font-weight: 700;
+      transition: transform var(--transition), box-shadow var(--transition), background var(--transition), border-color var(--transition), color var(--transition);
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px var(--shadow-soft);
+    }
+
+    button:active {
+      transform: translateY(-1px) scale(0.99);
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .secondary {
+      width: auto;
+      min-width: 88px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-surface);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 650;
+      box-shadow: 0 10px 22px transparent;
+    }
+
+    .secondary:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-main);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px var(--shadow-soft);
+    }
+
+    .secondary:active {
+      transform: translateY(-1px) scale(0.98);
+    }
+
+    .secondary svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .copy-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-width: 110px;
+      height: 40px;
+      overflow: hidden;
+    }
+
+    .copy-normal,
+    .copy-done {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .copy-done {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .copy-done span {
+      padding-right: 8px;
+    }
+
+    /* =========================
+       UPLOAD
+       ========================= */
+
+    .upload {
+      background: var(--bg-surface);
+      border: 1px dashed var(--border-main);
+      padding: 12px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      margin-bottom: 10px;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition), color var(--transition);
+      color: var(--text-muted);
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .upload:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-main);
+      transform: translateY(-2px);
+      color: var(--accent-main);
+    }
+
+    /* =========================
+       QR / TOOLTIP
+       ========================= */
+
+    #qr {
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 24px;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 100%;
+      margin-bottom: 18px;
+      border: 1px solid rgba(15, 23, 42, 0.05);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+      transition: box-shadow var(--transition), transform var(--transition), background var(--transition), border-color var(--transition);
+    }
+
+    #qr canvas,
+    #qr svg {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    #qr.transparent {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    /* estado visual ao arrastar logo sobre o QR */
+    #qr.qr-drop-hover {
+      border-color: var(--accent-main);
+      box-shadow: 0 18px 40px rgba(212, 175, 55, 0.22);
+      transform: translateY(-2px);
+    }
+
+    .tooltip {
+      margin-top: 15px;
+      font-size: 12px;
+      opacity: 0.85;
+      max-width: 360px;
+      word-break: break-word;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    /* =========================
+       SIZE / ANGLE
+       ========================= */
+
+    .sizeRow {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .sizeRow input {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .sizeRow span {
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 0 2px;
+    }
+
+    .presets {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .presets button {
+      font-size: 11px;
+      padding: 8px 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      color: var(--text-main);
+      box-shadow: none;
+    }
+
+    .presets button:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-main);
+      color: var(--accent-main);
+      transform: translateY(-1px);
+      box-shadow: none;
+    }
+
+    .angleRow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .angleSelect {
+      height: 40px;
+      padding: 0 14px;
+      font-size: 13px;
+      border-radius: 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      color: var(--text-main);
+    }
+
+    /* =========================
+       TOAST / LOADER
+       ========================= */
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border: 1px solid var(--border-soft);
+      padding: 10px 18px;
+      border-radius: 12px;
+      opacity: 0;
+      transition: opacity var(--transition), transform var(--transition), background var(--transition), border-color var(--transition);
+      pointer-events: none;
+      box-shadow: 0 18px 55px var(--shadow-soft);
+      font-weight: 650;
+      z-index: 40000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .loader {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border-soft);
+      border-top: 3px solid var(--success);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: auto;
+    }
+
+    /* =========================
+       MODAL
+       ========================= */
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg-overlay);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+      justify-content: center;
+      align-items: center;
+      z-index: 30000;
+      padding: 20px;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      background: var(--bg-modal);
+      color: var(--text-main);
+      padding: 34px;
+      border-radius: 24px;
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 30px 70px var(--shadow-main);
+      transform: translateY(18px) scale(0.99);
+      opacity: 0;
+      animation: modalIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+      text-align: center;
+    }
+
+    @keyframes modalIn {
+      to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    .modal-content h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 750;
+    }
+
+    .modal-content p {
+      margin: 0 0 18px;
+      line-height: 1.55;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .modal-content hr {
+      margin: 20px 0;
+      border: none;
+      height: 1px;
+      background: var(--border-soft);
+    }
+
+    .close-btn {
+      all: unset;
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition);
+      line-height: 1;
+      font-size: 22px;
+      z-index: 10;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 77, 79, 0.12);
+      border-color: rgba(255, 77, 79, 0.45);
+      color: var(--danger);
+      transform: rotate(90deg);
+    }
+
+    .developer {
+      margin-top: 18px;
+      text-align: center;
+    }
+
+    .dev-title {
+      opacity: 0.85;
+      font-size: 12px;
+      margin: 0 0 6px;
+      letter-spacing: 0.4px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 650;
+    }
+
+    .developer h4 {
+      margin: 0 0 14px;
+      font-weight: 750;
+      font-size: 14px;
+    }
+
+    .social-links {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .social-links a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      color: var(--text-main);
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      transition: transform var(--transition), background var(--transition), border-color var(--transition), color var(--transition), box-shadow var(--transition);
+    }
+
+    .social-links svg,
+    .social-links img {
+      width: 20px;
+      height: 20px;
+      opacity: 0.95;
+    }
+
+    .social-links a:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-main);
+      color: var(--accent-main);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px var(--shadow-soft);
+    }
+
+    /* =========================
+       HELP MENU FLUTUANTE
+       ========================= */
+
+    .help-button {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: flex-end;
+      z-index: 20000;
+    }
+
+    #help-toggle {
+      width: 54px;
+      height: 54px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-glass);
+      color: var(--accent-main);
+      font-size: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 18px 55px var(--shadow-soft);
+      transition: transform var(--transition), background var(--transition), border-color var(--transition), color var(--transition);
+    }
+
+    #help-toggle:hover {
+      transform: translateY(-3px) scale(1.03);
+      background: var(--accent-main);
+      color: var(--text-contrast);
+      border-color: var(--accent-main);
+    }
+
+    .help-links {
+      display: none;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .help-links a {
+      text-decoration: none;
+      font-size: 13px;
+      background: var(--bg-app);
+      color: var(--text-main);
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 18px 55px var(--shadow-soft);
+      transition: transform var(--transition), background var(--transition), border-color var(--transition), color var(--transition);
+    }
+
+    .help-links a:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-main);
+      color: var(--accent-main);
+      transform: translateX(-4px);
+    }
+
+    /* =========================
+       HUB DE CONFIG / TOGGLE TEMA
+       ========================= */
+
+    .top-utils-bar {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 94%;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 25px;
+      z-index: 25000;
+      pointer-events: none;
+    }
+
+    .config-hub {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    .config-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-glass);
+      padding: 8px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border-soft);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 55px var(--shadow-soft);
+    }
+
+    .config-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .config-btn {
+      width: 36px;
+      height: 36px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      color: var(--accent-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform var(--transition), background var(--transition), border-color var(--transition), color var(--transition), box-shadow var(--transition);
+      box-shadow: 0 10px 22px transparent;
+    }
+
+    .config-btn:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-main);
+      color: var(--accent-main);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px var(--shadow-soft);
+    }
+
+    #theme-toggle i {
+      font-size: 18px;
+      transition: transform 0.5s ease;
+    }
+
+    [data-theme="light"] #theme-icon {
+      transform: rotate(360deg);
+    }
+
+    /* =========================
+       FOOTER
+       ========================= */
+
+    .footer {
+      position: fixed;
+      bottom: -10px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      cursor: pointer;
+
+      background: linear-gradient(90deg,
+          var(--footer-fade) 30%,
+          var(--accent-main) 50%,
+          var(--footer-fade) 70%);
+
+      background-size: 200%;
+      background-position: -100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      transition: background-position 0.8s ease;
+    }
+
+    .footer:hover {
+      background-position: 100%;
+    }
+
+    /* =========================
+       PIX MODE
+       ========================= */
+
+    .pix-mode #uploadLogo {
+      display: none !important;
+    }
+
+    /* ============================================================
+       CSS LEGADO (DESABILITADO)
+       Mantido apenas para referência durante a migração.
+       ============================================================ */
+    @supports (legacy-disabled: 1) {
+      /* =========================
+COLOR SYSTEM / DESIGN TOKENS
+========================= */
+
+      /* ============================================================
+       SISTEMA DE CORES DINÂMICO (DARK/LIGHT)
+       ============================================================ */
+      :root {
+        /* --- MODO ESCURO (DEFAULT) --- */
+        --bg-body: #0A0B0D;
+        /* Fundo principal */
+        --bg-app: #121418;
+        /* Card do QR Code */
+        --bg-sidebar: #16181D;
+        /* Fundo lateral */
+        --bg-input: #1D2127;
+        /* Inputs e Cards de Categoria */
+        --bg-modal: rgba(22, 24, 30, 0.9);
+
+        --border-main: #2C3138;
+        --border-soft: rgba(255, 255, 255, .08);
+
+        --text-main: #F0F2F5;
+        /* Texto claro */
+        --text-muted: #8B949E;
+        /* Texto secundário */
+
+        --accent-main: #E6C55A;
+        /* Dourado */
+        --accent-soft: rgba(230, 197, 90, 0.15);
+        --shadow-main: rgba(0, 0, 0, 0.6);
+      }
+
+      /* --- MODO CLARO (ATIVADO VIA DATA-THEME) --- */
+      [data-theme="light"] {
+        --bg-body: #F0F2F5;
+        /* Cinza muito claro */
+        --bg-app: #FFFFFF;
+        /* Card Branco */
+        --bg-sidebar: #FFFFFF;
+        /* Lateral Branca */
+        --bg-input: #F8FAFC;
+        /* Inputs levemente cinzas */
+        --bg-modal: rgba(255, 255, 255, 0.95);
+
+        --border-main: #D1D5DB;
+        /* Borda cinza clara */
+        --border-soft: rgba(0, 0, 0, .08);
+
+        --text-main: #1A1D23;
+        /* Texto escuro */
+        --text-muted: #64748B;
+        /* Texto secundário escuro */
+
+        --accent-main: #D4AF37;
+        /* Dourado mais sólido para contraste no branco */
+        --accent-soft: rgba(212, 175, 55, 0.1);
+        --shadow-main: rgba(0, 0, 0, 0.1);
+      }
+
+      /* =========================================================
+   INTERIOR DO DARK MODAL — PREMIUM FINISH
+   ========================================================= */
+
+      /* Título Principal do Modal */
+      .modal-content h2 {
+        color: var(--accent-main);
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      /* Texto de parágrafo dentro do modal */
+      .modal-content p {
+        color: var(--text-muted);
+        font-size: 15px;
+        line-height: 1.6;
+        margin-bottom: 25px;
+      }
+
+      /* Listas de informações dentro do modal (Ex: Ajuda/Dicas) */
+      .modal-info-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        text-align: left;
+        margin-bottom: 30px;
+      }
+
+      .modal-info-item {
+        background: var(--bg-input);
+        padding: 15px;
+        border-radius: 16px;
+        border: 1px solid var(--border-soft);
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        transition: transform 0.2s ease;
+      }
+
+      .modal-info-item:hover {
+        transform: translateX(5px);
+        border-color: var(--accent-main);
+      }
+
+      .modal-info-item i {
+        color: var(--accent-main);
+        font-size: 18px;
+        margin-top: 2px;
+      }
+
+      /* Botão de Fechar (O "X") */
+      .close-modal {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 36px;
+        height: 36px;
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        border-radius: 50%;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .close-modal:hover {
+        background: var(--danger);
+        color: white;
+        border-color: var(--danger);
+        transform: rotate(90deg);
+      }
+
+      /* Rodapé do Modal (Botões de confirmação/entendido) */
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 10px;
+      }
+
+      .btn-modal-primary {
+        background: var(--accent-main);
+        color: var(--bg-dark);
+        border: none;
+        padding: 12px 25px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      .btn-modal-primary:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px var(--accent-soft);
+      }
+
+
+      /* =========================
+RESET
+========================= */
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', sans-serif;
+      }
+
+
+      /* =========================
+BODY
+========================= */
+
+      body {
+        background: var(--bg-body);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        color: var(--text-main);
+        padding: 30px;
+      }
+
+      /* =========================
+   PRELOADER (CORRIGIDO)
+   ========================= */
+
+      #preloader {
+        position: fixed;
+        inset: 0;
+        /* Forçamos o fundo a usar a variável do corpo ou preto puro para não ficar transparente */
+        background: var(--bg-body);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100000;
+        /* Um nível acima de tudo */
+        transition: opacity 0.6s ease, visibility 0.6s ease;
+      }
+
+      /* Quando carregar, o body recebe a classe .loaded via JS */
+      body.loaded #preloader {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      .loader-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .logo {
+        width: 90px;
+        margin-bottom: 20px;
+        /* Efeito de pulso suave na logo */
+        animation: pulseLogo 2s infinite ease-in-out;
+      }
+
+      .spinner {
+        width: 32px;
+        height: 32px;
+        /* A borda agora se adapta ao tema automaticamente */
+        border: 3px solid var(--border-soft);
+        border-top: 3px solid var(--accent-main);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes pulseLogo {
+
+        0%,
+        100% {
+          opacity: 0.6;
+          transform: scale(0.95);
+        }
+
+        50% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* =========================
+   DARK MODAL (ESTILO APPLE)
+   ========================= */
+
+      .modal {
+        display: none;
+        /* Ativado via JS com .show */
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        /* Desfoca o fundo do site */
+        z-index: 20000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .modal.show {
+        display: flex;
+      }
+
+      .modal-content {
+        background: var(--bg-modal);
+        border: 1px solid var(--border-soft);
+        border-radius: 28px;
+        /* Arredondamento moderno que você pediu */
+        padding: 40px;
+        width: 100%;
+        max-width: 500px;
+        position: relative;
+        box-shadow: 0 30px 60px var(--shadow-main);
+        animation: modalSlideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      @keyframes modalSlideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px) scale(0.98);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+
+      /* =========================
+APP LAYOUT
+========================= */
+
+      .app {
+        width: 1320px;
+        max-width: 98%;
+        background: var(--bg-app);
+        border: 1px solid var(--border-main);
+        border-radius: 24px;
+        display: grid;
+        grid-template-columns: 540px 1fr;
+        overflow: hidden;
+        box-shadow: 0 40px 120px var(--shadow-main);
+      }
+
+      .sidebar {
+        padding: 30px;
+        border-right: 1px solid rgba(255, 255, 255, .05);
+        overflow: auto;
+        max-height: 90vh;
+        position: relative;
+      }
+
+      .container-section {
+        display: flex;
+        width: 100%;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+
+      /* =========================
+SCROLLBAR
+========================= */
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        background-color: var(--bg-dark);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background-color: var(--accent-main);
+        border: 4px solid rgba(255, 255, 255, .05);
+      }
+
+
+      /* =========================
+GENERAL ELEMENTS
+========================= */
+
+      .box-img {
+        display: flex;
+        gap: 20px;
+        border: 1px solid var(--border-soft2);
+        padding: 6px;
+        border-radius: 8px;
+      }
+
+      .title {
+        font-size: 22px;
+        font-weight: 600;
+        margin-bottom: 20px;
+      }
+
+      .logo-suplime {
+        width: 80px;
+        height: 80px;
+      }
+
+      .section {
+        margin-bottom: 20px;
+      }
+
+
+      /* =========================
+TABS
+========================= */
+
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 15px;
+      }
+
+      .tab {
+        flex: 1;
+        padding: 8px;
+        font-size: 11px;
+        border-radius: 8px;
+        background: var(--bg-dark);
+        cursor: pointer;
+        text-align: center;
+        transition: .2s;
+      }
+
+      .tab:hover {
+        background: var(--accent-hover);
+        color: var(--text-dark);
+      }
+
+      .tab.active {
+        background: var(--accent-main);
+        color: #052e16;
+        font-weight: 600;
+      }
+
+
+      /* =========================
+FORM
+========================= */
+
+      label {
+        font-size: 12px;
+        opacity: .7;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 10px;
+        margin-top: 6px;
+        margin-bottom: 10px;
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        border-radius: 12px;
+        color: var(--text-main);
+      }
+
+      input[type=color] {
+        padding: 2px;
+        height: 44px;
+        width: 48px;
+        border-radius: 14px;
+        cursor: pointer;
+        border: none;
+        overflow: hidden;
+      }
+
+      .clr-field {
+        width: 100%;
+        border-radius: 12px;
+        border: 1.5px solid var(--border-soft);
+        background: var(--bg-input);
+        padding: 10px;
+        color: var(--text-main);
+      }
+
+      input[data-coloris] {
+        width: 100%;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1.5px solid var(--border-soft);
+        background: var(--bg-input);
+        color: var(--text-main);
+        font-weight: 500;
+        letter-spacing: .5px;
+        cursor: pointer;
+      }
+
+
+      /* =========================
+COLOR CONTROLS
+========================= */
+
+      .colorRow {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        padding: 6px 8px;
+        border-radius: 16px;
+        transition: .2s;
+      }
+
+      .colorRow:hover {
+        border-color: rgba(255, 255, 255, .18);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, .04) inset;
+      }
+
+      .colorRow button {
+        display: none;
+      }
+
+      .colorRow input[type=text] {
+        cursor: pointer;
+        font-weight: 500;
+        letter-spacing: .5px;
+        text-align: center;
+      }
+
+      .colorControl {
+        margin-bottom: 15px;
+      }
+
+      .colorControl label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        opacity: .7;
+      }
+
+      .colorPicker {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .colorPicker input[type=color] {
+        width: 48px;
+        height: 44px;
+        border-radius: 8px;
+        border: 1px solid var(--border-soft);
+        cursor: pointer;
+      }
+
+
+      /* =========================
+ICON BUTTON
+========================= */
+
+      .icon-btn {
+        background: var(--bg-preloader);
+        border: none;
+        border-radius: 6px;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        transition: background .2s;
+      }
+
+      .icon-btn:hover {
+        background: var(--accent-main);
+        color: var(--bg-preloader);
+      }
+
+
+      /* =========================
+CHECKBOX
+========================= */
+
+      .checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+        font-size: 13px;
+      }
+
+      .checkbox input {
+        margin: 0;
+        width: 16px;
+        height: 16px;
+      }
+
+
+      /* =========================
+BUTTONS
+========================= */
+
+      button {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 12px;
+        background: var(--accent-main);
+        color: #052e16;
+        font-weight: 600;
+        cursor: pointer;
+        transition: .2s;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+      }
+
+
+      /* =========================
+QR PREVIEW
+========================= */
+
+      .preview {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 40px;
+      }
+
+      .preview canvas {
+        background: #ffffff;
+        padding: 28px;
+        border-radius: 24px;
+        box-shadow: 0 15px 45px rgba(0, 0, 0, 0.2);
+      }
+
+      #qr {
+        background: var(--qr-bg);
+        padding: 22px;
+        border-radius: 18px;
+        transition: .3s;
+        position: relative;
+      }
+
+      #qr.transparent {
+        background: transparent;
+      }
+
+
+      /* =========================
+ACTIONS
+========================= */
+
+      /* container dos botões */
+
+      .actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      /* botões */
+
+      .secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+
+        padding: 8px 14px;
+
+        border-radius: 8px;
+        border: 1px solid #2a2a2a;
+
+        background: #1b1b1b;
+        color: #e8e8e8;
+
+        font-size: 13px;
+        cursor: pointer;
+
+        transition: all .18s ease;
+
+        width: auto;
+        /* ← importante */
+        min-width: 80px;
+        /* ← mantém tamanho bonito */
+      }
+
+      /* hover */
+
+      .secondary:hover {
+        background: #262626;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, .35);
+      }
+
+      /* clique */
+
+      .secondary:active {
+        transform: scale(0.96);
+      }
+
+      /* icones */
+
+      .secondary svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* =========================
+UPLOAD
+========================= */
+
+      .upload {
+        background: var(--bg-dark);
+        padding: 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        text-align: center;
+        font-size: 13px;
+        margin-bottom: 10px;
+        transition: .2s;
+      }
+
+      .upload:hover {
+        background: var(--accent-main);
+        transform: scale(1.04);
+        color: black;
+      }
+
+
+      /* =========================
+TOOLTIP
+========================= */
+
+      .tooltip {
+        margin-top: 15px;
+        font-size: 12px;
+        opacity: .75;
+        max-width: 320px;
+        word-break: break-all;
+        text-align: center;
+      }
+
+
+      /* =========================
+SIZE CONTROLS
+========================= */
+
+      .sizeRow {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .sizeRow input {
+        flex: 1;
+      }
+
+      .presets {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .presets button {
+        font-size: 10px;
+        padding: 6px;
+        background: var(--bg-input);
+        color: var(--text-main);
+      }
+
+      .presets button:hover {
+        background: var(--accent-hover);
+        color: var(--bg-input);
+      }
+
+
+      /* =========================
+ANGLE CONTROLS
+========================= */
+
+      .angleRow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .angleSelect {
+        height: 30px;
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 10px;
+        background: var(--bg-dark);
+        border: 1px solid var(--border-soft);
+        color: var(--text-main);
+      }
+
+      .refreshBtn {
+        width: 32px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-dark);
+        border-radius: 10px;
+        color: var(--text-main);
+        font-size: 14px;
+        transition: .2s;
+        cursor: pointer;
+      }
+
+      .refreshBtn:hover {
+        background: var(--accent-main);
+        color: #052e16;
+        transform: rotate(90deg);
+      }
+
+      /* =========================
+FOOTER
+========================= */
+      .footer {
+        position: fixed;
+        bottom: -10px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        padding: 20px;
+        font-size: 14px;
+        color: var(--text-muted);
+        cursor: pointer;
+      }
+
+      /* =========================
+MODAL CLOSE BUTTON
+========================= */
+
+      .close-btn {
+        all: unset;
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        font-size: 22px;
+        color: var(--text-main);
+        cursor: pointer;
+        z-index: 10;
+        line-height: 1;
+      }
+
+      .close-btn:hover {
+        color: var(--danger);
+      }
+
+
+      /* =========================
+TOAST
+========================= */
+
+      .toast {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: var(--accent-main);
+        color: #052e16;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: .3s;
+        pointer-events: none;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, .35);
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+
+      /* =========================
+LOADER
+========================= */
+
+      .loader {
+        width: 32px;
+        height: 32px;
+        border: 3px solid rgba(255, 255, 255, .2);
+        border-top: 3px solid var(--success);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: auto;
+      }
+
+
+      /* =========================
+MODAL
+========================= */
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(5px);
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+
+      .modal.show {
+        display: flex;
+      }
+
+      .modal-content {
+        position: relative;
+        background: var(--bg-modal);
+        color: var(--text-main);
+        padding: 30px;
+        max-width: 400px;
+        border-radius: 15px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .5);
+        transform: translateY(-30px);
+        animation: slideDown .3s forwards;
+        text-align: center;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .modal-content hr {
+        border: none;
+        height: 1px;
+        background: #444;
+        margin: 20px 0;
+      }
+
+      /* =========================
+MODAL CONTENT
+========================= */
+
+      .modal-content {
+        text-align: center;
+      }
+
+      /* título principal */
+
+      .modal-content h3 {
+        margin-bottom: 12px;
+      }
+
+      /* texto do copyright */
+
+      .modal-content p {
+        margin-bottom: 18px;
+        line-height: 1.5;
+      }
+
+      /* linha divisória */
+
+      .modal-content hr {
+        margin: 20px 0;
+        border: none;
+        height: 1px;
+        background: var(--border-soft);
+      }
+
+      /* bloco developer */
+
+      .developer {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      /* texto "Developed by" */
+
+      .dev-title {
+        opacity: .7;
+        font-size: 13px;
+        margin-bottom: 6px;
+        letter-spacing: .4px;
+      }
+
+      /* nome do desenvolvedor */
+
+      .developer h4 {
+        margin-bottom: 14px;
+        font-weight: 600;
+      }
+
+      /* =========================
+SOCIAL LINKS
+========================= */
+
+      .social-links {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 18px;
+        margin-top: 10px;
+      }
+
+      /* links (para SVG ou IMG) */
+
+      .social-links a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        width: 36px;
+        height: 36px;
+
+        border-radius: 8px;
+
+        color: var(--text-main);
+        background: var(--bg-input);
+
+        border: 1px solid var(--border-soft);
+
+        transition: .25s;
+      }
+
+      /* ícones */
+
+      .social-links svg,
+      .social-links img {
+        width: 20px;
+        height: 20px;
+        opacity: .9;
+      }
+
+      /* hover */
+
+      .social-links a:hover {
+        background: var(--accent-main);
+        color: #111;
+        transform: translateY(-2px);
+      }
+
+
+      /* =========================
+HELP FLOAT MENU
+========================= */
+
+      .help-button {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: flex-end;
+        z-index: 999;
+        font-family: Arial, sans-serif;
+      }
+
+      /* BOTÃO PRINCIPAL */
+
+      #help-toggle {
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        border: none;
+        background: var(--accent-gold);
+        color: #cc9b30;
+        font-size: 24px;
+        cursor: pointer;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        box-shadow: 0 6px 18px rgba(0, 0, 0, .45);
+        transition: .25s;
+      }
+
+      #help-toggle:hover {
+        transform: scale(1.08);
+        background: #FFD700;
+        color: #111;
+      }
+
+      /* MENU */
+
+      .help-links {
+        display: none;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      /* ITEM */
+
+      .help-links a {
+        text-decoration: none;
+        font-size: 13px;
+
+        background: var(--bg-app);
+        color: var(--text-main);
+
+        padding: 9px 14px;
+        border-radius: 10px;
+
+        border: 1px solid var(--border-soft);
+
+        box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+
+        transition: .2s;
+      }
+
+      /* HOVER */
+
+      .help-links a:hover {
+        background: var(--accent-main);
+        color: #111;
+        transform: translateX(-4px);
+      }
+
+      /* ITEM */
+
+      .help-links a {
+        text-decoration: none;
+        color: var(--text-main);
+        background: var(--bg-app);
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+
+        border: 1px solid var(--border-soft);
+
+        box-shadow: 0 3px 10px rgba(0, 0, 0, .25);
+
+        transition: .2s;
+      }
+
+      /* HOVER */
+
+      .help-links a:hover {
+        background: var(--accent-main);
+        color: #111;
+        transform: translateX(-3px);
+      }
+
+
+
+      /* =========================
+PIX MODE
+========================= */
+
+      .pix-mode #uploadLogo {
+        display: none !important;
+      }
+
+
+      /* =========================
+RESPONSIVE
+========================= */
+
+      @media(max-width:900px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media(max-width:600px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* botão copiar moderno */
+
+      .copy-btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+
+        /* Adicione/Ajuste estas linhas abaixo */
+        min-width: 110px;
+        /* Largura fixa para não achatar ao trocar o texto */
+        height: 38px;
+        /* Altura fixa para manter consistência */
+        overflow: hidden;
+        /* Garante que nada saia do limite do botão */
+      }
+
+      /* conteúdo do botão */
+
+      .copy-normal,
+      .copy-done {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+
+      /* estado normal */
+
+      .copy-normal {
+        position: relative;
+      }
+
+      /* estado "copiado" */
+
+      .copy-done {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        display: none;
+
+        align-items: center;
+        justify-content: center;
+      }
+
+      .copy-done span {
+        padding-right: 8px;
+      }
+
+      /* tamanho dos ícones */
+
+      .copy-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .copy-btn:active {
+        transform: scale(0.96);
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #111;
+        color: #fff;
+        padding: 10px 18px;
+        border-radius: 8px;
+        opacity: 0;
+        transition: .3s;
+        pointer-events: none;
+      }
+
+      .toast.show {
+        opacity: 1;
+      }
+
+      /* Estilo moderno para os seletores de HEX e o Reload */
+      .colorPicker {
+        display: flex !important;
+        gap: 8px !important;
+        align-items: center !important;
+        width: 100%;
+      }
+
+      /* O input de texto (onde você clica para abrir as cores) */
+      .color-hex {
+        flex: 1;
+        height: 40px !important;
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        border-radius: 10px;
+        text-align: center;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--text-main);
+        cursor: pointer;
+        /* Indica que é clicável */
+      }
+
+      /* Botão de copiar e Reload (Padrão Moderno) */
+      .btn-action-modern {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--text-main);
+        padding: 0;
+        flex-shrink: 0;
+      }
+
+      .btn-action-modern:hover {
+        background: var(--accent-main);
+        color: #000;
+        transform: translateY(-2px);
+      }
+
+      /* --- FORMULÁRIOS (Selects e Inputs de Texto) --- */
+      select,
+      input[type="text"],
+      input[type="number"] {
+        width: 100%;
+        height: 48px;
+        /* Aumentado para um toque mais moderno */
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        border-radius: 16px;
+        /* Arredondamento mais pronunciado */
+        padding: 0 18px;
+        color: var(--text-main);
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        appearance: none;
+        /* Remove seta padrão do navegador */
+      }
+
+      select:hover,
+      input:hover {
+        border-color: var(--border-main);
+        background: #232830;
+        /* Leve brilho ao passar o mouse */
+      }
+
+      select:focus,
+      input:focus {
+        border-color: var(--accent-main);
+        outline: none;
+        box-shadow: 0 0 0 4px var(--accent-soft);
+        background: var(--bg-input);
+      }
+
+      /* --- CAIXAS DE COR (HEX) E BOTÕES DE AÇÃO --- */
+      .color-hex {
+        flex: 1;
+        height: 48px !important;
+        /* Alinhado com os outros inputs */
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        border-radius: 16px;
+        /* Super arredondado */
+        text-align: center;
+        font-weight: 700;
+        color: var(--text-main);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .color-hex:hover {
+        border-color: var(--accent-main);
+        transform: scale(1.02);
+      }
+
+      .btn-action-modern {
+        width: 48px;
+        /* Quadrado perfeito mas arredondado */
+        height: 48px;
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        border-radius: 16px;
+        /* Mantém o padrão de 16px */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-main);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        /* Efeito elástico */
+      }
+
+      .btn-action-modern:hover {
+        background: var(--accent-main);
+        color: var(--bg-dark);
+        border-color: var(--accent-main);
+        transform: translateY(-3px) rotate(5deg);
+      }
+
+      /* --- LABELS (Títulos dos campos) --- */
+      label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-left: 4px;
+        /* Alinha com o arredondamento do input */
+      }
+
+      /* --- BOTÕES DE CATEGORIA (URL, WIFI, PIX, ETC) --- */
+      .type-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        /* Organiza em 2 colunas para ficar simétrico */
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .btn-type {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 85px;
+        /* Altura maior para parecer um card */
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        border-radius: 18px;
+        /* Arredondamento moderno estilo iOS */
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Estado de Hover (Passar o mouse) */
+      .btn-type:hover {
+        border-color: var(--accent-main);
+        background: var(--accent-soft);
+        color: var(--accent-main);
+        transform: translateY(-3px);
+      }
+
+      /* Estado Ativo (Quando selecionado) */
+      .btn-type.active {
+        background: var(--accent-main);
+        border-color: var(--accent-main);
+        color: var(--bg-dark);
+        /* Texto escuro no fundo dourado */
+        font-weight: 700;
+        box-shadow: 0 10px 20px var(--accent-soft);
+      }
+
+      /* Ícones dentro dos botões */
+      .btn-type i,
+      .btn-type svg {
+        font-size: 20px;
+        transition: transform 0.3s ease;
+      }
+
+      .btn-type:hover i,
+      .btn-type:hover svg {
+        transform: scale(1.1);
+      }
+
+      /* Pequeno brilho interno nos botões ativos */
+      .btn-type.active::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 100%;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+        pointer-events: none;
+      }
+
+      .theme-switch-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px;
+        background: var(--bg-input);
+        border-radius: 16px;
+        margin-bottom: 20px;
+        border: 1px solid var(--border-soft);
+      }
+
+      #theme-toggle i {
+        font-size: 18px;
+        transition: transform 0.5s ease;
+      }
+
+      /* Efeito de girar o ícone ao trocar */
+      [data-theme="light"] #theme-icon {
+        transform: rotate(360deg);
+      }
+
+      /* Botão Flutuante de Tema */
+      .theme-fixed-btn {
+        position: fixed;
+        bottom: 30px;
+        /* Mesma altura do botão de ajuda para ficarem alinhados */
+        right: 90px;
+        /* Joga ele mais para a esquerda (30 do ajuda + 48 do botão + 12 de espaço) */
+        width: 48px;
+        height: 48px;
+        background: var(--bg-input);
+        border: 1px solid var(--border-soft);
+        border-radius: 16px;
+        /* Mantém o padrão arredondado moderno */
+        color: var(--accent-main);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
+      }
+
+      .theme-fixed-btn:hover {
+        background: var(--accent-soft);
+        transform: translateY(-5px);
+        /* Efeito de subir levemente ao passar o mouse */
+        border-color: var(--accent-main);
+      }
+
+      /* Se você quiser ele no CANTO SUPERIOR DIREITO da tela toda, mude para: */
+      /* bottom: auto; top: 25px; right: 25px; position: fixed; */
+      .sidebar {
+        position: relative;
+        /* Isso garante que o botão 'grude' na sidebar e não na tela toda */
+        /* ... seu resto de código ... */
+      }
+
+      .top-utils-bar {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 94%;
+        max-width: 100%;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 25px;
+        z-index: 9999;
+      }
+
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .logo-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--accent-main);
+        border-radius: 50%;
+        box-shadow: 0 0 10px var(--accent-main);
+      }
+
+      .nav-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-main);
+        letter-spacing: 0.5px;
+      }
+
+      .nav-actions {
+        display: flex;
+        gap: 15px;
+      }
+
+      .nav-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        padding: 8px 12px;
+        border-radius: 10px;
+      }
+
+      .nav-btn:hover {
+        color: var(--accent-main);
+        background: var(--accent-soft);
+      }
+
+      .nav-btn i {
+        font-size: 16px;
+      }
+
+      /* Responsividade: Esconde o texto em telas pequenas, deixa só o ícone */
+      @media (max-width: 600px) {
+        .btn-label {
+          display: none;
+        }
+
+        .top-utils-bar {
+          width: 95%;
+          top: 10px;
+        }
+      }
+
+      /* Container que posiciona o grupo na tela */
+      .config-hub {
+        position: fixed;
+        /* Distância do topo */
+        right: 30px;
+        /* Distância da direita */
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 9999;
+      }
+
+      /* A "Pílula" do Dark Mode */
+      .config-pill {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(26, 26, 26, 0.8);
+        /* Fundo escuro semi-transparente */
+        padding: 6px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(8px);
+      }
+
+      .config-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      /* Estilo dos botões do Hub */
+      .config-btn {
+        width: 36px;
+        height: 36px;
+        background: #222;
+        border: 1px solid #333;
+        border-radius: 10px;
+        color: #CC9B30;
+        /* O seu dourado padrão */
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+      }
+
+      .config-btn:hover {
+        background: #CC9B30;
+        color: #111;
+        transform: translateY(-2px);
+      }
+
+      /* Ajuste específico para quando o modo claro estiver ativo */
+      [data-theme="light"] .config-pill {
+        background: rgba(255, 255, 255, 0.9);
+        border-color: #ddd;
+      }
+
+      [data-theme="light"] .config-btn {
+        background: #eee;
+        border-color: #ccc;
+      }
+
+      .footer {
+        cursor: pointer;
+        font-size: 14px;
+        color: #888;
+        text-align: center;
+
+        background: linear-gradient(90deg,
+            #b5b5b5 30%,
+            #ff0000 50%,
+            #b5b5b5 70%);
+
+        background-size: 200%;
+        background-position: -100%;
+
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+
+        transition: background-position 0.8s ease;
+      }
+
+      .footer:hover {
+        background-position: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="top-utils-bar">
+    <div class="config-hub">
+      <div class="config-pill">
+        <span class="config-label">Modo de Exibição</span>
+        <button id="theme-toggle" onclick="toggleTheme()" class="config-btn" title="Alternar Tema">
+          <i id="theme-icon" class="fas fa-moon"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+
+  <div id="preloader">
+    <div class="loader-box">
+
+      <img src="logo.png" class="logo" alt="Logo do aplicativo">
+
+      <h2>Holiver Core QR-Code Generator</h2>
+      <p>by Caio lima de souza</p>
+
+      <div class="spinner"></div>
+
+    </div>
+  </div>
+
+  <div class="app">
+
+    <div class="sidebar">
+
+      <div class="box-img">
+        <img class="logo-suplime" src="./logo.png" alt="logo">
+        <section class="container-section">
+          <div class="title">Holiver Core QR-Code Generator</div>
+          <div class="tabs">
+            <div class="tab active" onclick="setType('url',this)">URL</div>
+            <div class="tab" onclick="setType('wifi',this)">WiFi</div>
+            <div class="tab" onclick="setType('whatsapp',this)">WhatsApp</div>
+            <div class="tab" onclick="setType('email',this)">Email</div>
+            <div class="tab" onclick="setType('pix',this)">PIX</div>
+          </div>
+        </section>
+      </div>
+
+
+      <div id="fields"></div>
+
+      <div class="section" id="colorControls">
+        <div class="colorControl">
+          <label>Cor principal</label>
+          <div class="colorPicker">
+            <input class="color-hex" type="text" id="color" data-coloris value="#000000">
+            <button type="button" onclick="copyColor('color')" class="btn-action-modern" title="Copiar HEX">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path
+                  d="M16 1H4C2.9 1 2 1.9 2 3V15H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="colorControl">
+          <label>Cor secundária (gradiente)</label>
+          <div class="colorPicker">
+            <input class="color-hex" type="text" id="color2" data-coloris value="#CC9B30">
+            <button type="button" onclick="copyColor('color2')" class="btn-action-modern" title="Copiar HEX">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path
+                  d="M16 1H4C2.9 1 2 1.9 2 3V15H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <label>Ângulo do gradiente</label>
+        <div class="angleRow"><select id="angle" class="angleSelect" title="Selecione o ângulo do gradiente">
+            <option value="0">0°</option>
+            <option value="30">30°</option>
+            <option value="45">45°</option>
+            <option value="60">60°</option>
+            <option value="80">80°</option>
+            <option value="90">90°</option>
+            <option value="120">120°</option>
+            <option value="160">160°</option>
+            <option value="180">180°</option>
+          </select>
+
+        </div>
+
+        <div class="colorControl">
+          <label>Cor do fundo</label>
+          <div class="colorPicker">
+            <input class="color-hex" type="text" id="bg" data-coloris value="#ffffff">
+            <button type="button" onclick="copyColor('bg')" class="btn-action-modern" title="Copiar HEX">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path
+                  d="M16 1H4C2.9 1 2 1.9 2 3V15H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="checkbox">
+          <input type="checkbox" id="transparent" title="Ativar fundo transparente">
+          <span>Fundo transparente</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div id="styleSelector">
+          <label>Estilo do QR</label>
+          <select id="style" title="Selecione o estilo do QR">
+            <option value="dots" selected>Dots Moderno</option>
+            <option value="rounded">Rounded</option>
+            <option value="classy">Classy</option>
+            <option value="square">Square</option>
+          </select>
+        </div>
+
+        <label>Tamanho do QR (px)</label>
+        <div class="sizeRow">
+          <input type="number" id="size" value="300" min="200" max="2000" title="Tamanho do QR em pixels">
+          <span>px</span>
+        </div>
+
+        <div class="presets">
+          <button onclick="setSize(300)">Web</button>
+          <button onclick="setSize(600)">HD</button>
+          <button onclick="setSize(1000)">Print</button>
+          <button onclick="setSize(2000)">4K</button>
+        </div>
+      </div>
+
+      <div class="upload" id="uploadLogo" onclick="logoInput.click()">Upload Logo</div>
+      <input type="file" id="logoInput" accept="image/*" style="display:none">
+
+      <button onclick="generateQR()">Gerar QR</button>
+
+
+
+    </div>
+
+    <div class="preview">
+
+      <div id="qr" title="Passe o mouse para ver o conteúdo"></div>
+
+      <div class="actions">
+
+        <button class="secondary" onclick="downloadQR('png')">⬇ PNG</button>
+
+        <button class="secondary" onclick="downloadQR('svg')">⬇ SVG</button>
+
+        <button class="secondary" onclick="downloadQR('png',2000)">⬇ 4K</button>
+
+
+        <!-- BOTÃO COPIAR MODERNO -->
+
+        <button class="secondary copy-btn" onclick="copyData()" id="copyBtn">
+
+          <span class="copy-normal">
+
+            <svg viewBox="0 0 24 24">
+              <path fill="currentColor" d="M16 1H4C2.9 1 2 1.9 2 3V15H4V3H16V1ZM19
+      5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9
+      23 8 23H19C20.1 23 21 22.1 21
+      21V7C21 5.9 20.1 5 19 5ZM19
+      21H8V7H19V21Z" />
+            </svg>
+
+            <span>Copiar</span>
+
+          </span>
+
+
+          <span class="copy-done">
+
+            <svg viewBox="0 0 24 24">
+              <path fill="currentColor" d="M9 16.2L4.8 12L3.4 13.4L9
+      19L21 7L19.6 5.6L9 16.2Z" />
+            </svg>
+
+            <span>Copiado</span>
+
+          </span>
+
+        </button>
+
+
+        <button class="secondary" onclick="clearQR()">🧹 Limpar</button>
+
+      </div>
+
+      <div class="tooltip" id="tooltip">
+        Conteúdo do QR aparecerá aqui
+      </div>
+
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <!-- FOOTER -->
+  <footer class="footer" onclick="abrirDireitos()">
+    © <span id="ano"></span> GC TECH — Todos os direitos reservados
+  </footer>
+
+  <!-- MODAL -->
+  <div class="modal" id="modalDireitos">
+    <div class="modal-content">
+
+      <button class="close-btn" onclick="fecharDireitos()">&times;</button>
+
+      <h3>Copyright</h3>
+
+      <p>
+        © 2026 GC TECH. All rights reserved.<br>
+        All content on this website, including text, code,
+        design, logos, systems and features, is protected
+        by intellectual property laws.
+      </p>
+
+      <hr>
+
+      <div class="developer">
+        <p class="dev-title">Developed by</p>
+        <h4>Caio Lima de Souza</h4>
+
+        <div class="social-links">
+
+          <a href="https://www.linkedin.com/in/caiolimadev10/" target="_blank" rel="noopener noreferrer"
+            class="social-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M4.98 3.5C4.98 4.88 3.87 6 2.49 6 1.11 6 0 4.88 0 3.5S1.11 1 2.49 1C3.87 1 4.98 2.12 4.98 3.5zM.22 8h4.54v15H.22V8zM8.56 8h4.35v2.05h.06c.61-1.16 2.1-2.38 4.33-2.38 4.63 0 5.49 3.05 5.49 7.02V23h-4.54v-7.4c0-1.77-.03-4.04-2.46-4.04-2.47 0-2.85 1.93-2.85 3.91V23H8.56V8z" />
+            </svg>
+          </a>
+
+          <a href="https://github.com/CaioLima10" target="_blank" rel="noopener noreferrer" class="social-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.94c.58.1.79-.25.79-.55v-2.02c-3.2.7-3.87-1.54-3.87-1.54-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.7.08-.7 1.17.08 1.79 1.2 1.79 1.2 1.04 1.78 2.73 1.27 3.4.97.1-.76.4-1.27.73-1.56-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.19-3.07-.12-.3-.52-1.5.11-3.13 0 0 .97-.31 3.18 1.17a10.9 10.9 0 0 1 5.8 0c2.2-1.48 3.17-1.17 3.17-1.17.64 1.63.24 2.83.12 3.13.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.37-5.25 5.65.41.35.77 1.03.77 2.07v3.07c0 .3.21.66.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z" />
+            </svg>
+          </a>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Botão de ajuda flutuante -->
+  <div class="help-button">
+    <button id="help-toggle">?</button>
+    <div class="help-links">
+      <!--<a href="https://wa.me/SEUNUMERO" target="_blank">WhatsApp</a> -->
+      <a href="mailto:holivercore@gmail.com" target="_blank" rel="noopener noreferrer">Enviar Email</a>
+      <a href="https://www.instagram.com/sublime.cia" target="_blank" rel="noopener noreferrer">Instagram</a>
+      <a href="https://www.linkedin.com/company/sublimecia/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </div>
+  </div>
+
+  <script>
+
+    window.addEventListener("load", function () {
+
+      setTimeout(function () {
+
+        document.getElementById("preloader").style.display = "none";
+
+      }, 2000);
+
+    });
+
+    /* ======================
+    GLOBAL VARIABLES
+    ======================= */
+    let qr;
+    let type = "url";
+    let logoImage = null;
+
+    /* ======================
+    UI HANDLING
+    ======================= */
+
+    /**
+     * Shows a toast notification
+     * @param {string} msg - Message to display
+     */
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    /**
+     * Sets the active QR type and updates UI
+     * @param {string} t - Type to set
+     * @param {Element} el - Tab element clicked
+     */
+    function setType(t, el) {
+      type = t;
+
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      el.classList.add('active');
+
+      renderFields();
+
+      if (type === 'pix') {
+        document.body.classList.add("pix-mode");
+
+        document.getElementById('colorControls').style.display = 'none';
+        document.getElementById('styleSelector').style.display = 'none';
+
+      } else {
+        document.body.classList.remove("pix-mode");
+
+        document.getElementById('colorControls').style.display = 'block';
+        document.getElementById('styleSelector').style.display = 'block';
+      }
+
+      autoUpdate();
+    }
+
+    /**
+     * Renders input fields based on selected type
+     */
+    function renderFields() {
+      const f = document.getElementById("fields");
+
+      if (type === 'url') {
+        f.innerHTML = `<label>Link</label><input id="url" placeholder="https://site.com">`;
+      }
+
+      if (type === 'wifi') {
+        f.innerHTML = `<label>SSID</label><input id="ssid"><label>Senha</label><input id="pass">`;
+      }
+
+      if (type === 'whatsapp') {
+        f.innerHTML = `<label>Número</label><input id="phone" placeholder="551199999999"><label>Mensagem</label><input id="msg" placeholder="Olá">`;
+      }
+
+      if (type === 'email') {
+        f.innerHTML = `<label>Email</label><input id="email" placeholder="email@site.com">`;
+      }
+
+      if (type === 'pix') {
+        f.innerHTML = `
+                    <label>Chave PIX</label>
+                    <input id="pix" placeholder="email ou telefone">
+                    <label>Valor (opcional)</label>
+                    <input id="pixValue" placeholder="ex: 25.00">
+                    <label>Nome do Recebedor</label>
+                    <input id="pixNome" placeholder="Nome do recebedor" value="RECEBEDOR" maxlength="25">
+                `;
+      }
+
+      setTimeout(bindInputs, 50);
+    }
+
+    /**
+     * Binds input event listeners to fields
+     */
+    function bindInputs() {
+      document.querySelectorAll('#fields input').forEach(i => {
+        i.addEventListener('input', autoUpdate);
+      });
+    }
+
+    /* ======================
+    LOGO UPLOAD HANDLING
+    ======================= */
+
+    // Logo upload event listeners
+    const uploadBox = document.querySelector('.upload');
+    const logoInput = document.getElementById('logoInput');
+    const qrDropZone = document.getElementById('qr');
+
+    function handleLogoFile(file, { showToastOnLoad = false } = {}) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        logoImage = reader.result;
+        autoUpdate();
+        if (showToastOnLoad) {
+          showToast('Logo carregada');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    uploadBox.addEventListener('dragover', e => {
+      e.preventDefault();
+      uploadBox.style.background = '#1e293b';
+    });
+
+    uploadBox.addEventListener('dragleave', () => {
+      uploadBox.style.background = '#0f172a';
+    });
+
+    uploadBox.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadBox.style.background = '#0f172a';
+      const file = e.dataTransfer.files[0];
+      handleLogoFile(file, { showToastOnLoad: true });
+    });
+
+    // Suporte a arrastar a logo diretamente em cima do QR
+    if (qrDropZone) {
+      qrDropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        qrDropZone.classList.add('qr-drop-hover');
+      });
+
+      qrDropZone.addEventListener('dragleave', e => {
+        e.preventDefault();
+        qrDropZone.classList.remove('qr-drop-hover');
+      });
+
+      qrDropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        qrDropZone.classList.remove('qr-drop-hover');
+        const file = e.dataTransfer.files[0];
+        handleLogoFile(file, { showToastOnLoad: true });
+      });
+    }
+
+    logoInput.onchange = e => {
+      const file = e.target.files[0];
+      handleLogoFile(file, { showToastOnLoad: false });
+    };
+
+
+    /* ======================
+    PIX PAYLOAD GENERATION
+    ======================= */
+
+    /**
+     * Calculates CRC16 checksum for PIX payload
+     * @param {string} payload - The payload string
+     * @returns {string} CRC16 checksum
+     */
+    function crc16(payload) {
+      let polinomio = 0x1021;
+      let resultado = 0xFFFF;
+      for (let i = 0; i < payload.length; i++) {
+        resultado ^= payload.charCodeAt(i) << 8;
+        for (let j = 0; j < 8; j++) {
+          if ((resultado <<= 1) & 0x10000) resultado ^= polinomio;
+          resultado &= 0xFFFF;
+        }
+      }
+      return resultado.toString(16).toUpperCase().padStart(4, '0');
+    }
+
+    /**
+     * Generates PIX payment payload
+     * @param {string} chave - PIX key
+     * @param {string} valor - Payment amount
+     * @param {string} nome - Merchant name
+     * @param {string} cidade - Merchant city
+     * @returns {string} Complete PIX payload
+     */
+    function gerarPixPayload(chave, valor, nome = "RECEBEDOR", cidade = "SAOPAULO") {
+      chave = chave.trim().replace(/\s+/g, "");
+      nome = nome
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Z0-9 ]/g, "")
+        .toUpperCase()
+        .substring(0, 25);
+      cidade = cidade
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .substring(0, 15);
+
+      let payload = "";
+
+      payload += "000201";
+      payload += "010211";
+
+      const gui = "0014BR.GOV.BCB.PIX";
+      const keyLength = chave.length.toString().padStart(2, "0");
+      const keyField = "01" + keyLength + chave;
+      const merchantAccountInfo = gui + keyField;
+      const merchantLength = merchantAccountInfo.length.toString().padStart(2, "0");
+      payload += "26" + merchantLength + merchantAccountInfo;
+
+      payload += "52040000";
+      payload += "5303986";
+
+      if (valor && !isNaN(parseFloat(valor))) {
+        const amount = parseFloat(valor).toFixed(2);
+        payload += "54" + amount.length.toString().padStart(2, "0") + amount;
+      }
+
+      payload += "5802BR";
+
+      payload += "59" + nome.length.toString().padStart(2, "0") + nome;
+      payload += "60" + cidade.length.toString().padStart(2, "0") + cidade;
+
+      payload += "62070503***";
+
+      const payloadWithoutCRC = payload + "6304";
+      const crc = crc16(payloadWithoutCRC);
+
+      return payloadWithoutCRC + crc;
+    }
+
+    /* ======================
+    DATA GENERATION
+    ======================= */
+
+    /**
+     * Generates QR data based on current type and inputs
+     * @returns {string} QR code data
+     */
+    function getData() {
+      if (type === 'url') return document.getElementById("url")?.value || "";
+
+      if (type === 'wifi') {
+        const s = document.getElementById("ssid")?.value || "";
+        const p = document.getElementById("pass")?.value || "";
+        return s ? `WIFI:T:WPA;S:${s};P:${p};;` : "";
+      }
+
+      if (type === 'whatsapp') {
+        const ph = document.getElementById("phone")?.value || "";
+        const m = document.getElementById("msg")?.value || "";
+        return ph ? `https://wa.me/${ph}?text=${encodeURIComponent(m)}` : "";
+      }
+
+      if (type === 'email') {
+        const e = document.getElementById("email")?.value || "";
+        return e ? `mailto:${e}` : "";
+      }
+
+      if (type === 'pix') {
+        const chave = document.getElementById("pix")?.value.trim().toLowerCase() || "";
+        const valor = document.getElementById("pixValue")?.value.trim() || "";
+        const nome = document.getElementById("pixNome")?.value.trim().toUpperCase() || "RECEBEDOR";
+        if (!chave) return "";
+        return gerarPixPayload(chave, valor, nome);
+      }
+    }
+
+    document.addEventListener("input", function (e) {
+      if (e.target.id === "pix") {
+        e.target.value = e.target.value.toLowerCase();
+      }
+    });
+
+    /* ======================
+    QR CONTROL
+    ======================= */
+
+    /**
+     * Forces QR refresh with current data
+     */
+    function forceRefresh() {
+      const data = getData();
+      if (data) createQR(data, false);
+    }
+
+    /**
+     * Auto-updates QR when inputs change
+     */
+    function autoUpdate() {
+      const data = getData();
+      if (!data) {
+        document.getElementById("qr").innerHTML = "";
+        return;
+      }
+      createQR(data, false);
+    }
+
+    /**
+     * Generates QR code (user-triggered)
+     */
+    function generateQR() {
+      const data = getData();
+      if (!data) {
+        showToast("Preencha os campos");
+        return;
+      }
+      createQR(data, true);
+    }
+
+    /* ======================
+    QR RENDERING
+    ======================= */
+
+    /**
+     * Creates and renders QR code
+     * @param {string} data - QR data
+     * @param {boolean} save - Whether to save instance
+     */
+    function createQR(data, save = true) {
+      const color = document.getElementById("color").value;
+      const color2 = document.getElementById("color2").value;
+      const bg = document.getElementById("bg").value;
+      const style = document.getElementById("style").value;
+      const transparent = document.getElementById("transparent").checked;
+      const displaySize = 320; // tamanho fixo para o preview
+
+      const qrBox = document.getElementById("qr");
+      qrBox.innerHTML = '<div class="loader"></div>';
+
+      const isPix = (type === 'pix');
+
+      let options;
+
+      if (isPix) {
+        // PIX QR codes use fixed black/white styling for banking compatibility
+        options = {
+          width: displaySize,
+          height: displaySize,
+          data: data,
+          image: null,
+          margin: 10,
+          dotsOptions: {
+            color: "#000000",
+            type: "square"
+          },
+          backgroundOptions: { color: "#ffffff" },
+          cornersSquareOptions: { color: "#000000", type: "square" },
+          cornersDotOptions: { color: "#000000", type: "square" }
+        };
+      } else {
+        // Custom QR with gradients and styling
+        options = {
+          width: displaySize,
+          height: displaySize,
+          data: data,
+          image: logoImage,
+          imageOptions: { margin: 6 },
+          dotsOptions: {
+            gradient: {
+              type: "linear",
+              rotation: Number(document.getElementById("angle")?.value || 0),
+              colorStops: [
+                { offset: 0, color: color },
+                { offset: 1, color: color2 }
+              ]
+            },
+            type: style
+          },
+          backgroundOptions: {
+            color: transparent ? "rgba(0,0,0,0)" : bg
+          },
+          cornersSquareOptions: { color: color, type: "extra-rounded" },
+          cornersDotOptions: { type: "square", color: color }
+        };
+      }
+
+      // Reuse QR instance for better performance, but recreate for PIX to ensure styling isolation
+      if (qr && !isPix) {
+        qr.update(options);
+        qrBox.innerHTML = "";
+        qr.append(qrBox);
+      } else {
+        if (qr) qr = null; // Clear previous instance
+        qr = new QRCodeStyling(options);
+        qrBox.innerHTML = "";
+        qr.append(qrBox);
+      }
+
+      qrBox.title = data;
+
+      if (transparent) {
+        qrBox.classList.add("transparent");
+      } else {
+        qrBox.classList.remove("transparent");
+      }
+
+      document.getElementById("tooltip").textContent = data;
+    }
+
+    /* ======================
+    UTILITIES
+    ======================= */
+
+    /**
+     * Copies color HEX value to clipboard
+     * @param {string} id - Color input ID
+     */
+    async function copyColor(id) {
+      const value = document.getElementById(id).value;
+
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(value);
+        } else {
+          const temp = document.createElement('textarea');
+          temp.value = value;
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand('copy');
+          temp.remove();
+        }
+
+        showToast("HEX copiado!");
+
+      } catch (e) {
+        console.warn('Copy failed', e);
+        showToast("Erro ao copiar");
+      }
+    }
+
+    /**
+     * Sets QR size
+     * @param {number} v - Size value
+     */
+    function setSize(v) {
+      document.getElementById("size").value = v
+    }
+
+    /**
+     * Downloads QR code
+     * @param {string} ext - File extension
+     * @param {number} resolution - Optional high resolution
+     */
+    function downloadQR(ext, resolution) {
+      if (!qr) return;
+
+      // ultra HD export support
+      if (resolution) {
+        const current = Number(document.getElementById("size").value || 300);
+        const scale = resolution / current;
+
+        const data = getData();
+        const isPix = (type === 'pix');
+
+        let highResOptions;
+
+        if (isPix) {
+          // PIX QR codes always use fixed black/white styling
+          highResOptions = {
+            width: resolution,
+            height: resolution,
+            data: data,
+            image: null,
+            margin: 10,
+            dotsOptions: {
+              color: "#000000",
+              type: "square"
+            },
+            backgroundOptions: { color: "#ffffff" },
+            cornersSquareOptions: { color: "#000000", type: "square" },
+            cornersDotOptions: { color: "#000000", type: "square" }
+          };
+        } else {
+          // Custom QR with gradients and styling
+          const color = document.getElementById("color").value;
+          const color2 = document.getElementById("color2").value;
+          const bg = document.getElementById("bg").value;
+          const style = document.getElementById("style").value;
+          const transparent = document.getElementById("transparent").checked;
+          const angle = Number(document.getElementById("angle")?.value || 0);
+
+          highResOptions = {
+            width: resolution,
+            height: resolution,
+            data: data,
+            image: logoImage,
+            imageOptions: { margin: 6 },
+            dotsOptions: {
+              gradient: {
+                type: "linear",
+                rotation: angle,
+                colorStops: [
+                  { offset: 0, color: color },
+                  { offset: 1, color: color2 }
+                ]
+              },
+              type: style
+            },
+            backgroundOptions: {
+              color: transparent ? "rgba(0,0,0,0)" : bg
+            },
+            cornersSquareOptions: { color: color, type: "extra-rounded" },
+            cornersDotOptions: { type: "square", color: color }
+          };
+        }
+
+        const tmp = new QRCodeStyling(highResOptions);
+        tmp.download({ name: "qr-code", extension: ext });
+      } else {
+        qr.download({ name: "qr-code", extension: ext });
+      }
+    }
+
+    /**
+     * Clears QR code display
+     */
+    function clearQR() {
+
+      document.getElementById("qr").innerHTML = "";
+      document.getElementById("tooltip").textContent = "Conteúdo do QR aparecerá aqui";
+
+      qr = null;
+
+      // limpar logo
+      logoImage = null;
+      document.getElementById("logoInput").value = "";
+
+    }
+
+    /**
+     * Copies QR data to clipboard
+     */
+    function copyData() {
+
+      const text = document.getElementById("tooltip").textContent;
+
+      if (!text || text === "Conteúdo do QR aparecerá aqui") {
+        showToast("Nada para copiar");
+        return;
+      }
+
+      if (navigator.clipboard && window.isSecureContext) {
+
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            showToast("Copiado!");
+            animarBotaoCopiar();
+          })
+          .catch(() => fallbackCopy(text));
+
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand("copy");
+        showToast("Copiado!");
+        animarBotaoCopiar();
+      } catch {
+        showToast("Erro ao copiar");
+      }
+
+      document.body.removeChild(textarea);
+    }
+
+    function animarBotaoCopiar() {
+
+      const btn = document.getElementById("copyBtn");
+      if (!btn) return;
+
+      const normal = btn.querySelector(".copy-normal");
+      const done = btn.querySelector(".copy-done");
+
+      normal.style.display = "none";
+      done.style.display = "flex";
+
+      setTimeout(() => {
+        normal.style.display = "flex";
+        done.style.display = "none";
+      }, 2000);
+
+    }
+
+    function showToast(msg) {
+
+      const toast = document.getElementById("toast");
+      if (!toast) return;
+
+      toast.textContent = msg;
+      toast.classList.add("show");
+
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2000);
+
+    }
+    /* ======================
+    INITIALIZATION
+    ======================= */
+
+    // Initialize app on page load
+    document.addEventListener("DOMContentLoaded", () => {
+      // Set default type
+      setType('url', document.querySelector('.tab'));
+
+      // Initialize Coloris color picker
+      Coloris({
+        themeMode: 'dark',
+        format: 'hex',
+        alpha: false,
+        theme: 'pill'
+      });
+
+      // Auto-update QR when color changes
+      document.addEventListener("coloris:pick", () => {
+        autoUpdate();
+      });
+
+      // Setup auto-update for styling controls
+      ["color", "color2", "bg", "style", "transparent", "angle"].forEach(id => {
+        const el = document.getElementById(id)
+        if (el) el.addEventListener("input", autoUpdate)
+      });
+
+      // Show welcome message
+      showToast("QR Studio GC PRO carregado!");
+    });
+
+    document.getElementById("ano").textContent = new Date().getFullYear();
+
+    function abrirDireitos() {
+      document.getElementById("modalDireitos").style.display = "flex";
+    }
+
+    window.onclick = function (e) {
+      if (e.target.id === "modalDireitos") {
+        document.getElementById("modalDireitos").style.display = "none";
+      }
+    }
+
+
+    const toggle = document.getElementById("help-toggle");
+    const links = document.querySelector(".help-links");
+
+    toggle.addEventListener("click", () => {
+      if (links.style.display === "flex") {
+        links.style.display = "none";
+      } else {
+        links.style.display = "flex";
+      }
+    });
+
+    function abrirDireitos() {
+      document.getElementById("modalDireitos").classList.add("show");
+    }
+
+    function fecharDireitos() {
+      document.getElementById("modalDireitos").classList.remove("show");
+    }
+
+    // Atualizar ano automaticamente
+    document.getElementById("ano").innerText = new Date().getFullYear();
+
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const themeIcon = document.getElementById('theme-icon');
+
+      // Verifica o tema atual
+      const currentTheme = html.getAttribute('data-theme');
+      const targetTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+      // Aplica o novo tema
+      html.setAttribute('data-theme', targetTheme);
+
+      // Troca o ícone (Sol para Light, Lua para Dark)
+      if (targetTheme === 'light') {
+        themeIcon.classList.replace('fa-moon', 'fa-sun');
+      } else {
+        themeIcon.classList.replace('fa-sun', 'fa-moon');
+      }
+
+      // Salva a preferência no navegador
+      localStorage.setItem('qr-theme', targetTheme);
+    }
+
+    // Quando a página carrega, aplica o tema salvo
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('qr-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
+      const themeIcon = document.getElementById('theme-icon');
+      if (savedTheme === 'light') {
+        themeIcon.classList.replace('fa-moon', 'fa-sun');
+      }
+    });
+
+  </script>
+</body>
+
+</html>

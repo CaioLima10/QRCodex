@@ -6,7 +6,7 @@ let splash;
 
 function createWindow() {
 
-  // ✅ Splash primeiro
+  // Splash primeiro
   splash = new BrowserWindow({
     width: 520,
     height: 320,
@@ -16,13 +16,14 @@ function createWindow() {
     alwaysOnTop: true,
     hasShadow: true,
     autoHideMenuBar: true,
-    backgroundColor: "#090A0C"
+    backgroundColor: "#090A0C",
+    icon: path.join(__dirname, "build/app.ico")
   });
 
   splash.loadFile("splash.html");
 
 
-  // ✅ esperar 4 segundos e só depois criar a janela principal
+  // ✅ esperar loading terminar
   setTimeout(() => {
 
     mainWindow = new BrowserWindow({
@@ -30,13 +31,12 @@ function createWindow() {
       height: 800,
       icon: path.join(__dirname, "build/app.ico"),
       autoHideMenuBar: true,
-      show: false,
+      show: false
     });
 
     mainWindow.maximize();
 
     mainWindow.loadFile("index.html");
-
 
     mainWindow.once("ready-to-show", () => {
 
@@ -45,7 +45,7 @@ function createWindow() {
 
     });
 
-  }, 4000);
+  }, 3500); // 3.5 segundos (tempo profissional)
 
 }
 

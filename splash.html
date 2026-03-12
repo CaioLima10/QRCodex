@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+
+  <style>
+    html,
+    body {
+
+      margin: 0;
+      padding: 0;
+
+      width: 100%;
+      height: 100%;
+
+      background: #090A0C;
+
+      font-family: "Segoe UI", "Arial", sans-serif;
+
+    }
+
+
+    #splash {
+
+      position: absolute;
+
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+
+      background: #16181c;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+
+      box-shadow: none;
+
+
+    }
+
+
+    /* LOGO */
+
+    .logo {
+
+      width: 80px;
+
+      margin-bottom: 10px;
+
+      animation: pulse 2.5s infinite;
+
+    }
+
+    @keyframes pulse {
+
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.08);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+
+    }
+
+
+    /* TITULO */
+
+    h2 {
+
+      margin: 4px 0;
+
+      font-size: 17px;
+
+      font-weight: 600;
+
+      letter-spacing: 1px;
+
+      color: #ffffff;
+
+    }
+
+
+    /* TEXTO */
+
+    p {
+
+      margin: 0;
+
+      font-size: 12px;
+
+      color: #9aa3ad;
+
+    }
+
+
+
+    /* 🔥 BARRA VERTICAL FOGO */
+
+    .fire-bar {
+
+      position: absolute;
+
+      right: 25px;
+      /* ← distância do canto */
+
+      top: 20px;
+      bottom: 20px;
+
+      width: 6px;
+
+      background: #0f1114;
+
+      overflow: hidden;
+
+      border-radius: 4px;
+
+    }
+
+
+    .fire {
+
+      position: absolute;
+
+      bottom: -100%;
+
+      width: 100%;
+      height: 100%;
+
+      background: linear-gradient(0deg,
+          #ff0000,
+          #ff5a00,
+          #ffaa00,
+          #ffff66);
+
+      animation: fireUp 1.6s linear infinite;
+
+    }
+
+
+    @keyframes fireUp {
+
+      0% {
+        bottom: -100%;
+      }
+
+      100% {
+        bottom: 100%;
+      }
+
+    }
+
+
+
+    /* FOOTER */
+
+    #footer {
+
+      position: absolute;
+
+      bottom: 8px;
+      left: 10px;
+
+      font-size: 11px;
+
+      color: #7d8691;
+
+    }
+  </style>
+
+</head>
+
+<body>
+  <div id="splash">
+
+    <img src="logo.png" class="logo">
+
+    <h2>Holiver Core QR-Code Generator</h2>
+
+    <p>Initializing engine...</p>
+
+    <div class="fire-bar">
+      <div class="fire"></div>
+    </div>
+
+    <div id="footer">
+      by: Caio Lima de Souza
+    </div>
+
+  </div>
+
+</body>
+
+</html>

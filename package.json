@@ -7,6 +7,13 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "validate": "node scripts/validate-build.js",
+    "validate-platform": "node scripts/validate-platform.js",
+    "test-all": "node scripts/test-all.js",
+    "test-professional": "node scripts/professional-test.js",
+    "test-human-error": "node scripts/human-error-test.js",
+    "test-final": "node scripts/final-validation.js",
+    "prebuild": "npm run test-final",
     "build": "node scripts/run-electron-builder.js",
     "win": "node scripts/run-electron-builder.js --win",
     "linux": "node scripts/run-electron-builder.js --linux",
@@ -46,8 +53,6 @@
     "files": [
       "main.js",
       "index.html",
-      "renderer.js",
-      "styles.css",
       "splash.html",
       "build/**/*",
       "node_modules/**/*",
@@ -73,21 +78,30 @@
         "AppImage",
         "deb"
       ],
-      "icon": "build/logo.png"
+      "icon": "build/icon.png",
+      "category": "Utility"
     },
     "mac": {
       "target": "dmg",
-      "icon": "build/app.icns"
+      "icon": "build/app.icns",
+      "category": "public.app-category.productivity",
+      "darkModeSupport": true
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "HoliverQRCode",
       "installerIcon": "build/app.ico",
       "uninstallerIcon": "build/app.ico",
-      "installerHeaderIcon": "build/app.ico"
+      "installerHeaderIcon": "build/app.ico",
+      "installerSidebar": "build/app.ico",
+      "uninstallDisplayName": "HoliverQRCode",
+      "deleteAppDataOnUninstall": true,
+      "runAfterFinish": true,
+      "menuCategory": "Holiver QRCode Generator"
     }
   }
 }

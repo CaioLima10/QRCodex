@@ -45,7 +45,7 @@ function createWindow() {
 
     });
 
-  }, 3500); // 3.5 segundos (tempo profissional)
+  }, 3750); // 3.75 segundos (exatamente 3750ms)
 
 }
 

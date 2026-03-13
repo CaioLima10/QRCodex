@@ -1,9 +1,9 @@
-name: Build Multiplatform
+name: Release
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch:
+    tags:
+      - 'v*'
 
 jobs:
   build-windows:
@@ -28,7 +28,7 @@ jobs:
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: holiver-qrcode-win
+          name: holiver-qrcode-win-release
           path: |
             dist/*.exe
             dist/*.zip
@@ -55,7 +55,7 @@ jobs:
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: holiver-qrcode-linux
+          name: holiver-qrcode-linux-release
           path: |
             dist/*.AppImage
             dist/*.deb
@@ -82,5 +82,5 @@ jobs:
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: holiver-qrcode-mac
+          name: holiver-qrcode-mac-release
           path: dist/*.dmg

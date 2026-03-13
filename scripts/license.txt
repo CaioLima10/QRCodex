@@ -1,0 +1,41 @@
+Licença de Uso - HoliverQRCode Generator
+Versão 1.0.1
+
+Copyright (c) 2024 Holiver Core
+
+Este software é fornecido "como está", sem garantias de qualquer tipo.
+O uso deste software é gratuito para fins pessoais e comerciais.
+
+Ao instalar este software, você concorda com os seguintes termos:
+
+1. Uso Permitido:
+   - Geração de códigos QR para qualquer finalidade
+   - Uso comercial e pessoal
+   - Distribuição dos códigos QR gerados
+
+2. Restrições:
+   - Não é permitida a engenharia reversa do software
+   - Não é permitida a redistribuição do software modificado
+   - Não é permitida a remoção dos créditos do autor
+
+3. Limitação de Responsabilidade:
+   - Os desenvolvedores não se responsabilizam por perdas de dados
+   - Os desenvolvedores não se responsabilizam pelo uso dos códigos QR gerados
+   - O uso é por sua conta e risco
+
+4. Suporte:
+   - Suporte técnico disponível através do repositório GitHub
+   - Atualizações serão fornecidas conforme disponibilidade
+
+5. Privacidade:
+   - Este software não coleta dados pessoais
+   - Todos os dados são processados localmente
+   - Nenhuma informação é enviada para servidores externos
+
+Ao continuar com a instalação, você declara ter lido e concordado com estes termos.
+
+Para mais informações, visite:
+https://github.com/CaioLima10/QRCodex
+
+Desenvolvido por: Caio Lima de Souza
+Email: contato@holivercore.com

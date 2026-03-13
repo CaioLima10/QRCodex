@@ -32,8 +32,9 @@ jobs:
         with:
           name: holiver-qrcode-win-release
           path: |
-            dist/*.exe
-            dist/*.zip
+            dist/*-nsis.exe
+            dist/*-portable.exe
+            dist/*-zip.zip
 
   build-linux:
     runs-on: ubuntu-latest

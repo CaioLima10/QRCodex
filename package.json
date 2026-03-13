@@ -37,7 +37,7 @@
   "build": {
     "appId": "com.sublimecia.holiverqrcode",
     "productName": "HoliverQRCode",
-    "artifactName": "HoliverQRCode - Setup.${ext}",
+    "artifactName": "${productName}-${version}-${os}-${arch}-${target}.${ext}",
     "toolsets": {
       "winCodeSign": "1.1.0"
     },
@@ -58,6 +58,8 @@
       "main.js",
       "index.html",
       "splash.html",
+      "logo.png",
+      "icon.png",
       "build/**/*",
       "node_modules/**/*",
       "!**/*.map",

@@ -24,30 +24,31 @@ function createWindow() {
 
   splash.loadFile("splash.html");
 
+  // ⏰ Iniciar timer SOMENTE quando splash estiver visível
+  splash.once("ready-to-show", () => {
 
-  // ⏰ esperar loading terminar - 3750ms (3.75 segundos)
-  setTimeout(() => {
+    // Agora sim, iniciar contagem de 3750ms
+    setTimeout(() => {
 
-    mainWindow = new BrowserWindow({
-      width: 1000,
-      height: 800,
-      icon: path.join(__dirname, "build/app.ico"),
-      autoHideMenuBar: true,
-      show: false
-    });
+      mainWindow = new BrowserWindow({
+        width: 1000,
+        height: 800,
+        icon: path.join(__dirname, "build/app.ico"),
+        autoHideMenuBar: true,
+        show: false
+      });
 
-    mainWindow.maximize();
+      mainWindow.maximize();
 
-    mainWindow.loadFile("index.html");
+      mainWindow.loadFile("index.html");
 
-    mainWindow.once("ready-to-show", () => {
+      mainWindow.once("ready-to-show", () => {
+        splash.destroy();
+        mainWindow.show();
+      });
 
-      splash.destroy();
-      mainWindow.show();
-
-    });
-
-  }, 3750); // 3.75 segundos (exatamente 3750ms)
+    }, 3750); // 3.75 segundos (exatamente 3750ms)
+  });
 
 }
 

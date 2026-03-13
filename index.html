@@ -387,6 +387,58 @@
       appearance: none;
     }
 
+    .input-with-mic {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-with-mic input {
+      padding-right: 54px;
+    }
+
+    .mic-btn {
+      position: absolute;
+      right: 10px;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition), box-shadow var(--transition);
+    }
+
+    .mic-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .mic-btn:hover {
+      border-color: var(--border-main);
+      color: var(--text-main);
+    }
+
+    .mic-btn:active {
+      transform: scale(0.96);
+    }
+
+    .mic-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .mic-btn.is-listening {
+      color: var(--accent-main);
+      border-color: var(--accent-main);
+      background: var(--accent-soft);
+      box-shadow: var(--focus-ring);
+    }
+
     input:hover,
     select:hover {
       border-color: var(--border-main);
@@ -3256,7 +3308,13 @@ RESPONSIVE
       const f = document.getElementById("fields");
 
       if (type === 'url') {
-        f.innerHTML = `<label>Link</label><input id="url" placeholder="https://site.com">`;
+        f.innerHTML = `
+          <label>Link</label>
+          <div class="input-with-mic">
+            <input id="url" placeholder="https://site.com">
+            ${micButton("url")}
+          </div>
+        `;
       }
 
       if (type === 'wifi') {
@@ -3268,21 +3326,114 @@ RESPONSIVE
       }
 
       if (type === 'email') {
-        f.innerHTML = `<label>Email</label><input id="email" placeholder="email@site.com">`;
+        f.innerHTML = `
+          <label>Email</label>
+          <div class="input-with-mic">
+            <input id="email" placeholder="email@site.com">
+            ${micButton("email")}
+          </div>
+        `;
       }
 
       if (type === 'pix') {
         f.innerHTML = `
                     <label>Chave PIX</label>
-                    <input id="pix" placeholder="CPF, CNPJ, Email, Telefone ou Chave Aleatória">
+                    <div class="input-with-mic">
+                      <input id="pix" placeholder="CPF, CNPJ, Email, Telefone ou Chave Aleatória">
+                      ${micButton("pix")}
+                    </div>
                     <label>Valor (opcional)</label>
                     <input id="pixValue" placeholder="ex: 25.00">
                     <label>Nome do Recebedor</label>
-                    <input id="pixNome" placeholder="Nome do recebedor" value="RECEBEDOR" maxlength="25">
+                    <div class="input-with-mic">
+                      <input id="pixNome" placeholder="Nome do recebedor" value="RECEBEDOR" maxlength="25">
+                      ${micButton("pixNome")}
+                    </div>
                 `;
       }
 
       setTimeout(bindInputs, 50);
+    }
+
+    /**
+     * Returns microphone button markup
+     * @param {string} targetId - Input id that receives dictation
+     */
+    function micButton(targetId) {
+      return `
+        <button class="mic-btn" type="button" data-target="${targetId}" aria-label="Ditado por voz" title="Ditado por voz">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zm-5 9a7 7 0 0 0 6.93-6h-2.02A5 5 0 0 1 12 19a5 5 0 0 1-4.91-5H5.07A7 7 0 0 0 12 20z"/>
+          </svg>
+        </button>
+      `;
+    }
+
+    /**
+     * Setup microphone buttons when available
+     */
+    function setupVoiceButtons() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const supported = !!SpeechRecognition;
+      document.querySelectorAll('.mic-btn').forEach(btn => {
+        btn.disabled = !supported;
+        btn.setAttribute('aria-pressed', 'false');
+        if (!supported) {
+          btn.title = 'Microfone indisponível';
+          return;
+        }
+        btn.title = 'Ditado por voz';
+        btn.addEventListener('click', () => startVoiceInput(btn.dataset.target, btn));
+      });
+    }
+
+    let activeRecognition = null;
+
+    /**
+     * Starts speech dictation and fills the target input
+     * @param {string} targetId - Input id
+     * @param {HTMLButtonElement} button - Microphone button
+     */
+    function startVoiceInput(targetId, button) {
+      const input = document.getElementById(targetId);
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!input || !SpeechRecognition) return;
+
+      if (activeRecognition) {
+        activeRecognition.abort();
+        activeRecognition = null;
+      }
+
+      const recognition = new SpeechRecognition();
+      activeRecognition = recognition;
+      recognition.lang = 'pt-BR';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      button.classList.add('is-listening');
+      button.setAttribute('aria-pressed', 'true');
+
+      recognition.onresult = (event) => {
+        const text = event.results?.[0]?.[0]?.transcript || "";
+        if (!text) return;
+        input.value = text;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        autoUpdate();
+      };
+
+      recognition.onerror = () => {
+        // Fail silently to avoid interrupting user flow
+      };
+
+      recognition.onend = () => {
+        button.classList.remove('is-listening');
+        button.setAttribute('aria-pressed', 'false');
+        if (activeRecognition === recognition) {
+          activeRecognition = null;
+        }
+      };
+
+      recognition.start();
     }
 
     /**
@@ -3292,6 +3443,7 @@ RESPONSIVE
       document.querySelectorAll('#fields input').forEach(i => {
         i.addEventListener('input', autoUpdate);
       });
+      setupVoiceButtons();
     }
 
     /* ======================

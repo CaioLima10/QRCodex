@@ -3288,18 +3288,18 @@ RESPONSIVE
     /**
      * Binds input event listeners to fields
      */
-    funct    bind     s() {
-      document.querySelectorAll('#     s input').forEach(i => {
+    function bindInputs() {
+      document.querySelectorAll('#fields input').forEach(i => {
         i.addEventListener('input', autoUpdate);
       });
     }
 
     /* ======================
     LOGO UPLOAD HANDLING
-    ===========    ======== */
+    ======================= */
 
-    // Logo u    d event listeners
-       st uploadBox = document.querySelector('.upload');
+    // Logo upload event listeners
+    const uploadBox = document.querySelector('.upload');
     const logoInput = document.getElementById('logoInput');
     const qrDropZone = document.getElementById('qr');
 
@@ -3360,16 +3360,16 @@ RESPONSIVE
 
     /* ======================
     PIX PAYLOAD GENERATION
-    =========    ========== */
+    ======================= */
 
     /**
-       Calculates CRC16 checks    or PIX payload
-     * @param    ring     load - The payload string
-     * @returns {s     } CRC16 checksum
+     * Calculates CRC16 checksum for PIX payload
+     * @param {string} payload - The payload string
+     * @returns {string} CRC16 checksum
      */
-    function crc16(pay      {
+    function crc16(payload) {
       let polinomio = 0x1021;
-       et resultado = 0xFFFF;
+      let resultado = 0xFFFF;
       for (let i = 0; i < payload.length; i++) {
         resultado ^= payload.charCodeAt(i) << 8;
         for (let j = 0; j < 8; j++) {
@@ -3382,13 +3382,13 @@ RESPONSIVE
 
     /**
      * Generates PIX payment payload
-     * @param {string} ch    - PI     
-     * @param {string} valor -      nt amount
-     * @param {string} n      Merchant name
-     * @param {string} cid      Merchant city
-     * @returns {string}     lete PIX payload
+     * @param {string} chave - PIX key
+     * @param {string} valor - Payment amount
+     * @param {string} nome - Merchant name
+     * @param {string} cidade - Merchant city
+     * @returns {string} Complete PIX payload
      */
-    function ger     Payload(chave, valor, nome = "RECEBEDOR",     de = "SAOPAULO") {
+    function gerarPixPayload(chave, valor, nome = "RECEBEDOR", cidade = "SAOPAULO") {
       chave = chave.trim().replace(/\s+/g, "");
       nome = nome
         .normalize("NFD")
@@ -3437,13 +3437,14 @@ RESPONSIVE
 
     /* ======================
     DATA GENERATION
-    ================    === */
+    ======================= */
 
     /**
-     * Gen    es QR data based    current type and inputs
-        retu     string} QR code data
+     * Generates QR data based on current type and inputs
+     * @returns {string} QR code data
      */
-    function getData() {       if (type === 'url') return docu     getElementById("url")?.value || "";
+    function getData() {
+      if (type === 'url') return document.getElementById("url")?.value || "";
 
       if (type === 'wifi') {
         const s = document.getElementById("ssid")?.value || "";
@@ -3479,22 +3480,22 @@ RESPONSIVE
 
     /* ======================
     QR CONTROL
-    =====================    /
+    ======================= */
 
     /**
-     * Forces Q    fresh with     ent data
+     * Forces QR refresh with current data
      */
-    functio    rceR     h() {
+    function forceRefresh() {
       const data = getData();
-       f (data) createQR(data, false);
+      if (data) createQR(data, false);
     }
 
     /**
      * Auto-updates QR when inputs change
      */
-    function    oUpd      {
+    function autoUpdate() {
       const data = getData();
-         (!data) {
+      if (!data) {
         document.getElementById("qr").innerHTML = "";
         return;
       }
@@ -3504,9 +3505,9 @@ RESPONSIVE
     /**
      * Generates QR code (user-triggered)
      */
-    function    erat      {
+    function generateQR() {
       const data = getData();
-         (!data) {
+      if (!data) {
         showToast("Preencha os campos");
         return;
       }
@@ -3515,14 +3516,15 @@ RESPONSIVE
 
     /* ======================
     QR RENDERING
-    ===================     */
+    ======================= */
 
     /**
-     * Create    d renders QR     
-     * @param {string} data    R da        * @param {boolean} save - W     r to save instance
+     * Creates and renders QR code
+     * @param {string} data - QR data
+     * @param {boolean} save - Whether to save instance
      */
-    fu     n createQR(data, save = true) {
-      const color =     ment.getElementById("color").value;
+    function createQR(data, save = true) {
+      const color = document.getElementById("color").value;
       const color2 = document.getElementById("color2").value;
       const bg = document.getElementById("bg").value;
       const style = document.getElementById("style").value;
@@ -3604,14 +3606,14 @@ RESPONSIVE
 
     /* ======================
     UTILITIES
-    ======================    
+    ======================= */
 
     /**
-     * Copies co    HEX value     lipboard
-     * @param {stri    id -     r input ID
+     * Copies color HEX value to clipboard
+     * @param {string} id - Color input ID
      */
-    async function      olor(id) {
-      const value = documen     ElementById(id).value;
+    async function copyColor(id) {
+      const value = document.getElementById(id).value;
 
       try {
         if (navigator.clipboard && window.isSecureContext) {
@@ -3636,16 +3638,20 @@ RESPONSIVE
     /**
      * Sets QR size
      * @param {number} v - Size value
-                 ion setSize(v)         document.getElementById("size"     ue = v
+     */
+    function setSize(v) {
+      document.getElementById("size").value = v
     }
 
     /**
      * Downloads QR code
-     * @param {string} ext - File ext    on
-       @param {number} res     on - Optional high resolution
+     * @param {string} ext - File extension
+     * @param {number} resolution - Optional high resolution
      */
-      nction downloadQR(ext, resolution) {
-      if (!qr) retu           // ultra HD export support
+    function downloadQR(ext, resolution) {
+      if (!qr) return;
+
+      // ultra HD export support
       if (resolution) {
         const current = Number(document.getElementById("size").value || 300);
         const scale = resolution / current;
@@ -3715,7 +3721,9 @@ RESPONSIVE
     /**
      * Clears QR code display
      */
-    function clearQR() {             ent.getElementById("qr").     HTML = "";
+    function clearQR() {
+
+      document.getElementById("qr").innerHTML = "";
       document.getElementById("tooltip").textContent = "Conteúdo do QR aparecerá aqui";
 
       qr = null;
@@ -3729,9 +3737,9 @@ RESPONSIVE
     /**
      * Copies QR data to clipboard
      */
-    function copyDa     {
+    function copyData() {
 
-      const text = document.getElem     Id("tooltip").textContent;
+      const text = document.getElementById("tooltip").textContent;
 
       if (!text || text === "Conteúdo do QR aparecerá aqui") {
         showToast("Nada para copiar");
@@ -3806,10 +3814,10 @@ RESPONSIVE
     }
     /* ======================
     INITIALIZATION
-    =================    == */
+    ======================= */
 
-    // Initialize a    n page load
-       ument.addEventListener("DOMContentLoaded", () => {
+    // Initialize app on page load
+    document.addEventListener("DOMContentLoaded", () => {
       // Set default type
       setType('url', document.querySelector('.tab'));
 

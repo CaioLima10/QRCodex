@@ -3,11 +3,6 @@
 const { app, BrowserWindow, session, systemPreferences } = require("electron");
 const path = require("path");
 
-app.commandLine.appendSwitch("enable-speech-dispatcher");
-app.commandLine.appendSwitch("enable-features", "WebSpeechAPI");
-app.commandLine.appendSwitch("unsafely-treat-insecure-origin-as-secure", "file://");
-app.commandLine.appendSwitch("allow-file-access-from-files");
-
 const ICON_PATHS = {
   win32: "build/app.ico",
   linux: "build/icon.png",

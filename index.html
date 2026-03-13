@@ -435,22 +435,22 @@
     }
 
     .mic-btn.is-listening {
-      color: var(--accent-main);
-      border-color: var(--accent-main);
-      background: var(--accent-soft);
-      box-shadow: 0 0 0 4px rgba(230, 197, 90, 0.18);
+      color: var(--danger);
+      border-color: var(--danger);
+      background: rgba(255, 77, 79, 0.12);
+      box-shadow: 0 0 0 4px rgba(255, 77, 79, 0.18);
       animation: micPulse 1.2s ease-in-out infinite;
     }
 
     @keyframes micPulse {
       0% {
-        box-shadow: 0 0 0 0 rgba(230, 197, 90, 0.35);
+        box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.35);
       }
       70% {
-        box-shadow: 0 0 0 10px rgba(230, 197, 90, 0);
+        box-shadow: 0 0 0 10px rgba(255, 77, 79, 0);
       }
       100% {
-        box-shadow: 0 0 0 0 rgba(230, 197, 90, 0);
+        box-shadow: 0 0 0 0 rgba(255, 77, 79, 0);
       }
     }
 
@@ -3368,7 +3368,10 @@ RESPONSIVE
                     <label>Valor (opcional)</label>
                     <input id="pixValue" placeholder="ex: 25.00">
                     <label>Nome do Recebedor</label>
-                    <input id="pixNome" placeholder="Nome do recebedor" value="RECEBEDOR" maxlength="25">
+                    <div class="input-with-mic">
+                      <input id="pixNome" placeholder="Nome do recebedor" value="RECEBEDOR" maxlength="25">
+                      ${micButton("pixNome")}
+                    </div>
                 `;
       }
 
@@ -3382,8 +3385,10 @@ RESPONSIVE
     function micButton(targetId) {
       return `
         <button class="mic-btn" type="button" data-target="${targetId}" aria-label="Ditado por voz" title="Ditado por voz">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zm-5 9a7 7 0 0 0 6.93-6h-2.02A5 5 0 0 1 12 19a5 5 0 0 1-4.91-5H5.07A7 7 0 0 0 12 20z"/>
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+            <path d="M5 10a7 7 0 0 0 14 0"></path>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
           </svg>
         </button>
       `;
@@ -3403,24 +3408,44 @@ RESPONSIVE
           return;
         }
         btn.title = 'Ditado por voz';
-        btn.addEventListener('click', () => startVoiceInput(btn.dataset.target, btn));
+        btn.addEventListener('click', async () => {
+          await startVoiceInput(btn.dataset.target, btn);
+        });
       });
     }
 
     let activeRecognition = null;
     let activeButton = null;
-    let activeBaseValue = "";
-    let activeFinalTranscript = "";
+    let micPermissionGranted = false;
+
+    async function requestMicPermission() {
+      if (micPermissionGranted) return true;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Microfone indisponível neste dispositivo.");
+        return false;
+      }
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        micPermissionGranted = true;
+        return true;
+      } catch (error) {
+        alert("Permissão de microfone negada.");
+        return false;
+      }
+    }
 
     /**
      * Starts speech dictation and fills the target input
      * @param {string} targetId - Input id
      * @param {HTMLButtonElement} button - Microphone button
      */
-    function startVoiceInput(targetId, button) {
+    async function startVoiceInput(targetId, button) {
       const input = document.getElementById(targetId);
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!input || !SpeechRecognition) return;
+
+      const allowed = await requestMicPermission();
+      if (!allowed) return;
 
       if (activeRecognition) {
         if (activeButton === button) {
@@ -3434,30 +3459,21 @@ RESPONSIVE
       const recognition = new SpeechRecognition();
       activeRecognition = recognition;
       activeButton = button;
-      activeBaseValue = input.value ? `${input.value.trim()} ` : "";
-      activeFinalTranscript = "";
 
       recognition.lang = 'pt-BR';
-      recognition.interimResults = true;
       recognition.continuous = false;
+      recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
       button.classList.add('is-listening');
       button.setAttribute('aria-pressed', 'true');
 
       recognition.onresult = (event) => {
-        let interimTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
-          const transcript = event.results[i][0]?.transcript || "";
-          if (event.results[i].isFinal) {
-            activeFinalTranscript += `${transcript} `;
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        const nextValue = `${activeBaseValue}${activeFinalTranscript}${interimTranscript}`.trim();
-        input.value = nextValue;
+        const text = event.results?.[0]?.[0]?.transcript || "";
+        if (!text) return;
+        input.value = text.trim();
         input.dispatchEvent(new Event('input', { bubbles: true }));
+        autoUpdate();
       };
 
       recognition.onerror = () => {

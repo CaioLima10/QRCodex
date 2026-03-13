@@ -1,7 +1,6 @@
 'use strict';
 
 const { app, BrowserWindow } = require("electron");
-const { autoUpdater } = require("electron-updater");
 const path = require("path");
 
 function getAppIcon() {
@@ -68,10 +67,15 @@ function createWindow() {
 
 function setupAutoUpdater() {
   if (!app.isPackaged) return;
-  autoUpdater.autoDownload = true;
-  autoUpdater.checkForUpdatesAndNotify().catch((error) => {
-    console.error("Auto-update failed:", error);
-  });
+  try {
+    const { autoUpdater } = require("electron-updater");
+    autoUpdater.autoDownload = true;
+    autoUpdater.checkForUpdatesAndNotify().catch((error) => {
+      console.error("Auto-update failed:", error);
+    });
+  } catch (error) {
+    console.error("Auto-update unavailable:", error);
+  }
 }
 
 app.whenReady().then(() => {

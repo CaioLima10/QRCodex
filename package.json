@@ -101,19 +101,10 @@
       "installerIcon": "build/app.ico",
       "uninstallerIcon": "build/app.ico",
       "installerHeaderIcon": "build/app.ico",
-      "installerSidebar": "build/app.ico",
       "uninstallDisplayName": "HoliverQRCode",
       "deleteAppDataOnUninstall": true,
       "runAfterFinish": true,
-      "menuCategory": "Holiver QRCode Generator",
-      "displayLanguageSelector": false,
-      "showLanguageDialog": false,
-      "language": "PortugueseBrazil",
-      "perMachineInstallation": false,
-      "compressionLevel": 9,
-      "include": "build/app.ico",
-      "license": "MIT License",
-      "installMode": "perMachine"
+      "perMachine": false
     }
   }
 }

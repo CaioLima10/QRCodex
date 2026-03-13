@@ -110,6 +110,11 @@ jobs:
         with:
           path: release
           pattern: holiver-qrcode-*-release
+      - name: Remove duplicate debug artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          find release -name "builder-debug.yml" -delete
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -118,5 +123,6 @@ jobs:
           generate_release_notes: true
           files: release/**/*
           fail_on_unmatched_files: true
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

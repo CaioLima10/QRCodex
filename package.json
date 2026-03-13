@@ -22,7 +22,12 @@
     "win": "node scripts/run-electron-builder.js --win",
     "linux": "node scripts/run-electron-builder.js --linux",
     "mac": "node scripts/run-electron-builder.js --mac",
-    "dist": "node scripts/run-electron-builder.js --dir"
+    "dist": "node scripts/run-electron-builder.js --dir",
+    "install:app": "node installer/install.js",
+    "install:verify": "node installer/verify-install.js",
+    "install:status": "node installer/verify-install.js",
+    "uninstall:app": "node uninstaller/uninstall.js",
+    "uninstall:verify": "node uninstaller/verify-uninstall.js"
   },
   "dependencies": {
     "electron-updater": "^6.8.3",

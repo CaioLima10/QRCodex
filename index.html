@@ -417,7 +417,8 @@
     .mic-btn svg {
       width: 16px;
       height: 16px;
-      fill: currentColor;
+      fill: none;
+      stroke: currentColor;
     }
 
     .mic-btn:hover {
@@ -435,22 +436,22 @@
     }
 
     .mic-btn.is-listening {
-      color: var(--danger);
-      border-color: var(--danger);
-      background: rgba(255, 77, 79, 0.12);
-      box-shadow: 0 0 0 4px rgba(255, 77, 79, 0.18);
-      animation: micPulse 1.2s ease-in-out infinite;
+      color: var(--success);
+      border-color: var(--success);
+      background: rgba(34, 197, 94, 0.14);
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+      animation: micPulse 1.6s ease-in-out infinite;
     }
 
     @keyframes micPulse {
       0% {
-        box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.35);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.35);
       }
       70% {
-        box-shadow: 0 0 0 10px rgba(255, 77, 79, 0);
+        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
       }
       100% {
-        box-shadow: 0 0 0 0 rgba(255, 77, 79, 0);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
       }
     }
 
@@ -3385,7 +3386,7 @@ RESPONSIVE
     function micButton(targetId) {
       return `
         <button class="mic-btn" type="button" data-target="${targetId}" aria-label="Ditado por voz" title="Ditado por voz">
-          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="9" y="2" width="6" height="12" rx="3"></rect>
             <path d="M5 10a7 7 0 0 0 14 0"></path>
             <line x1="12" y1="19" x2="12" y2="22"></line>
@@ -3425,13 +3426,32 @@ RESPONSIVE
         return false;
       }
       try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
         micPermissionGranted = true;
         return true;
       } catch (error) {
         alert("Permissão de microfone negada.");
         return false;
       }
+    }
+
+    function setMicActive(button, isActive) {
+      if (!button) return;
+      button.classList.toggle('is-listening', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    }
+
+    function stopActiveRecognition() {
+      if (!activeRecognition) return;
+      try {
+        activeRecognition.stop();
+      } catch (error) {
+        // Ignore stop errors
+      }
+      setMicActive(activeButton, false);
+      activeRecognition = null;
+      activeButton = null;
     }
 
     /**
@@ -3442,18 +3462,21 @@ RESPONSIVE
     async function startVoiceInput(targetId, button) {
       const input = document.getElementById(targetId);
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!input || !SpeechRecognition) return;
+      if (!input) return;
+      if (!SpeechRecognition) {
+        alert("Reconhecimento de voz não suportado neste navegador.");
+        return;
+      }
 
       const allowed = await requestMicPermission();
       if (!allowed) return;
 
       if (activeRecognition) {
         if (activeButton === button) {
-          activeRecognition.stop();
+          stopActiveRecognition();
           return;
         }
-        activeRecognition.abort();
-        activeRecognition = null;
+        stopActiveRecognition();
       }
 
       const recognition = new SpeechRecognition();
@@ -3465,8 +3488,7 @@ RESPONSIVE
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
-      button.classList.add('is-listening');
-      button.setAttribute('aria-pressed', 'true');
+      setMicActive(button, true);
 
       recognition.onresult = (event) => {
         const text = event.results?.[0]?.[0]?.transcript || "";
@@ -3477,15 +3499,12 @@ RESPONSIVE
       };
 
       recognition.onerror = () => {
-        // Fail silently to avoid interrupting user flow
+        stopActiveRecognition();
       };
 
       recognition.onend = () => {
-        button.classList.remove('is-listening');
-        button.setAttribute('aria-pressed', 'false');
         if (activeRecognition === recognition) {
-          activeRecognition = null;
-          activeButton = null;
+          stopActiveRecognition();
         }
       };
 

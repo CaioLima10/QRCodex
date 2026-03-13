@@ -37,7 +37,6 @@
   "build": {
     "appId": "com.sublimecia.holiverqrcode",
     "productName": "HoliverQRCode",
-    "artifactName": "${productName}-${version}-${os}-${arch}-${target}.${ext}",
     "toolsets": {
       "winCodeSign": "1.1.0"
     },

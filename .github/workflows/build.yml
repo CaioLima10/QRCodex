@@ -17,6 +17,8 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci
+      - name: GitHub Actions Validation
+        run: npm run github-actions-test
       - name: Validate build
         run: npm run validate
       - name: Validate platform
@@ -44,6 +46,8 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci
+      - name: GitHub Actions Validation
+        run: npm run github-actions-test
       - name: Validate build
         run: npm run validate
       - name: Validate platform
@@ -71,6 +75,8 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci
+      - name: GitHub Actions Validation
+        run: npm run github-actions-test
       - name: Validate build
         run: npm run validate
       - name: Validate platform

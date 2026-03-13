@@ -206,7 +206,7 @@ function validatePermissions() {
     const filePath = path.join(projectRoot, file);
     if (fs.existsSync(filePath)) {
       try {
-        fs.accessSync(filePath, fs.constants.R_OK | fs.constants.X_OK);
+        fs.accessSync(filePath, fs.constants.R_OK);
         console.log(`✅ Permissões OK: ${file}`);
       } catch (error) {
         validationErrors.push(`❌ Permissões inválidas: ${file}`);

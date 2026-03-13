@@ -39,6 +39,7 @@ jobs:
             dist/*.zip
             dist/*.yml
             dist/*.blockmap
+          if-no-files-found: error
 
   build-linux:
     runs-on: ubuntu-latest
@@ -68,6 +69,7 @@ jobs:
             dist/*.deb
             dist/*.yml
             dist/*.blockmap
+          if-no-files-found: error
 
   build-macos:
     runs-on: macos-latest
@@ -96,6 +98,7 @@ jobs:
             dist/*.dmg
             dist/*.yml
             dist/*.blockmap
+          if-no-files-found: error
 
   create-release:
     needs: [build-windows, build-linux, build-macos]
@@ -106,6 +109,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release
+          pattern: holiver-qrcode-*-release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -113,5 +117,6 @@ jobs:
           name: ${{ github.ref_name }}
           generate_release_notes: true
           files: release/**/*
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

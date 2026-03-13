@@ -25,7 +25,7 @@ function createWindow() {
   splash.loadFile("splash.html");
 
 
-  // ⏰ esperar loading terminar - 8000ms (8 segundos)
+  // ⏰ esperar loading terminar - 3750ms (3.75 segundos)
   setTimeout(() => {
 
     mainWindow = new BrowserWindow({
@@ -47,7 +47,7 @@ function createWindow() {
 
     });
 
-  }, 8000); // 8 segundos (exatamente 8000ms)
+  }, 3750); // 3.75 segundos (exatamente 3750ms)
 
 }
 

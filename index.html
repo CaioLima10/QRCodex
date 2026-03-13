@@ -394,7 +394,7 @@
     }
 
     .input-with-mic input {
-      padding-right: 56px;
+      padding-right: 18px;
     }
 
     .mic-btn {
@@ -427,7 +427,7 @@
     }
 
     .mic-btn:active {
-      transform: translateY(-50%) scale(0.96);
+      transform: translateY(-50%);
     }
 
     .mic-btn:disabled {
@@ -628,6 +628,102 @@
       color: var(--text-contrast);
       font-weight: 700;
       transition: transform var(--transition), box-shadow var(--transition), background var(--transition), border-color var(--transition), color var(--transition);
+    }
+
+    button.mic-btn {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      box-shadow: none;
+    }
+
+    button.mic-btn:hover,
+    button.mic-btn:active {
+      transform: translateY(-50%);
+      box-shadow: none;
+    }
+
+    .mic-permission-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 100001;
+      padding: 20px;
+    }
+
+    .mic-permission-modal.show {
+      display: flex;
+    }
+
+    .mic-permission-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-modal);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: 0 20px 50px var(--shadow-main);
+      text-align: center;
+    }
+
+    .mic-permission-card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .mic-permission-card p {
+      margin: 0 0 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .mic-permission-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .mic-permission-actions .mic-primary,
+    .mic-permission-actions .mic-secondary {
+      width: auto;
+      min-width: 120px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-surface);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition), background var(--transition), border-color var(--transition), color var(--transition);
+    }
+
+    .mic-permission-actions .mic-primary {
+      background: var(--accent-main);
+      border-color: var(--accent-main);
+      color: var(--text-contrast);
+    }
+
+    .mic-permission-actions .mic-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px var(--shadow-soft);
+    }
+
+    .mic-permission-actions .mic-secondary:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent-main);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px var(--shadow-soft);
     }
 
     button:hover {
@@ -3384,15 +3480,7 @@ RESPONSIVE
      * @param {string} targetId - Input id that receives dictation
      */
     function micButton(targetId) {
-      return `
-        <button class="mic-btn" type="button" data-target="${targetId}" aria-label="Ditado por voz" title="Ditado por voz">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="9" y="2" width="6" height="12" rx="3"></rect>
-            <path d="M5 10a7 7 0 0 0 14 0"></path>
-            <line x1="12" y1="19" x2="12" y2="22"></line>
-          </svg>
-        </button>
-      `;
+      return "";
     }
 
     /**
@@ -3400,7 +3488,9 @@ RESPONSIVE
      */
     function setupVoiceButtons() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const supported = !!SpeechRecognition;
+      const supportsWebSpeech = !!SpeechRecognition;
+      const supportsOffline = !!window.Vosk;
+      const supported = supportsWebSpeech || supportsOffline;
       document.querySelectorAll('.mic-btn').forEach(btn => {
         btn.disabled = !supported;
         btn.setAttribute('aria-pressed', 'false');
@@ -3417,23 +3507,269 @@ RESPONSIVE
 
     let activeRecognition = null;
     let activeButton = null;
+    let activeTargetId = null;
     let micPermissionGranted = false;
+    let micStream = null;
+    let isRecording = false;
+    let shouldRestart = false;
+    let activeBaseValue = "";
+    let activeFinalTranscript = "";
+    let pendingStart = null;
+    let restartTimer = null;
+    let permissionPromise = null;
+    let hadAudioThisSession = false;
+    let hadResultThisSession = false;
+    let speechServiceOk = null;
+    let lastSpeechCheckAt = 0;
+    let voskReady = false;
+    let voskInitPromise = null;
+    let voskModel = null;
+    let voskRecognizer = null;
+    let voskRecognizerRate = 16000;
+    let voskAudioContext = null;
+    let voskProcessor = null;
+    let voskSource = null;
+    const allowOnlineFallback = true;
+    const forceOnlineOnly = true;
+    const offlineInitTimeoutMs = 3000;
+    const audioConstraints = {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    };
+
+    function getVoskModelUrl() {
+      return new URL('./assets/vosk-model-small-pt-0.3.tar.gz', window.location.href).toString();
+    }
+
+    async function ensureVoskReady() {
+      if (voskReady) return true;
+      if (voskInitPromise) return voskInitPromise;
+
+      if (!window.Vosk || typeof window.Vosk.createModel !== 'function') {
+        showToast("Motor offline indisponível.");
+        return false;
+      }
+
+      showToast("Carregando modelo offline...");
+      voskInitPromise = (async () => {
+        try {
+          voskModel = await window.Vosk.createModel(getVoskModelUrl());
+          voskReady = true;
+          return true;
+        } catch (error) {
+          showToast("Modelo offline não encontrado.");
+          return false;
+        } finally {
+          voskInitPromise = null;
+        }
+      })();
+
+      return voskInitPromise;
+    }
+
+    async function ensureVoskReadyWithTimeout(timeoutMs) {
+      const readyPromise = Promise.resolve(ensureVoskReady());
+      const timeoutPromise = new Promise(resolve => {
+        setTimeout(() => resolve(false), timeoutMs);
+      });
+      return Promise.race([readyPromise, timeoutPromise]);
+    }
+
+    function handleVoskResult(text, isFinal) {
+      if (!isRecording || !activeTargetId) return;
+      const input = document.getElementById(activeTargetId);
+      if (!input) return;
+
+      if (isFinal && text) {
+        activeBaseValue = `${activeBaseValue}${text} `;
+      }
+
+      const value = `${activeBaseValue}${isFinal ? "" : text}`.trim();
+      if (!value) return;
+
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      autoUpdate();
+    }
+
+    function startVoskCapture(stream) {
+      if (!voskModel) return false;
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return false;
+
+      stopVoskCapture();
+
+      voskAudioContext = new AudioContextClass({ sampleRate: 16000 });
+      const sampleRate = voskAudioContext.sampleRate || 16000;
+
+      voskRecognizer = new voskModel.KaldiRecognizer(sampleRate);
+      voskRecognizerRate = sampleRate;
+
+      voskRecognizer.on("result", (message) => {
+        handleVoskResult(message?.result?.text || "", true);
+      });
+
+      voskRecognizer.on("partialresult", (message) => {
+        handleVoskResult(message?.result?.partial || "", false);
+      });
+
+      voskSource = voskAudioContext.createMediaStreamSource(stream);
+      voskProcessor = voskAudioContext.createScriptProcessor(4096, 1, 1);
+
+      voskProcessor.onaudioprocess = (event) => {
+        try {
+          voskRecognizer.acceptWaveform(event.inputBuffer);
+        } catch (error) {
+          // ignore
+        }
+      };
+
+      voskSource.connect(voskProcessor);
+      voskProcessor.connect(voskAudioContext.destination);
+      return true;
+    }
+
+    function stopVoskCapture() {
+      if (voskProcessor) {
+        voskProcessor.disconnect();
+        voskProcessor.onaudioprocess = null;
+        voskProcessor = null;
+      }
+      if (voskSource) {
+        voskSource.disconnect();
+        voskSource = null;
+      }
+      if (voskAudioContext) {
+        voskAudioContext.close();
+        voskAudioContext = null;
+      }
+      voskRecognizer = null;
+    }
 
     async function requestMicPermission() {
       if (micPermissionGranted) return true;
+      if (micStream) return true;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Microfone indisponível neste dispositivo.");
+        return false;
+      }
+      if (permissionPromise) return permissionPromise;
+      permissionPromise = new Promise((resolve) => {
+        const modal = ensureMicPermissionModal();
+        const allowBtn = modal.querySelector('[data-action="allow"]');
+        const denyBtn = modal.querySelector('[data-action="deny"]');
+
+        const cleanup = () => {
+          allowBtn.onclick = null;
+          denyBtn.onclick = null;
+          modal.classList.remove("show");
+        };
+
+        allowBtn.onclick = async () => {
+          try {
+            micStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+            micPermissionGranted = true;
+            micStream.getTracks().forEach(track => track.stop());
+            micStream = null;
+            cleanup();
+            permissionPromise = null;
+            resolve(true);
+          } catch (error) {
+            cleanup();
+            permissionPromise = null;
+            alert("Permissão de microfone negada.");
+            resolve(false);
+          }
+        };
+
+        denyBtn.onclick = () => {
+          cleanup();
+          permissionPromise = null;
+          resolve(false);
+        };
+
+        modal.classList.add("show");
+      });
+      return permissionPromise;
+    }
+
+    async function ensureMicStream() {
+      if (micStream) return true;
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert("Microfone indisponível neste dispositivo.");
         return false;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop());
-        micPermissionGranted = true;
+        micStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
         return true;
       } catch (error) {
         alert("Permissão de microfone negada.");
         return false;
       }
+    }
+
+    async function checkSpeechService() {
+      const now = Date.now();
+      if (speechServiceOk && now - lastSpeechCheckAt < 15000) return true;
+      if (!navigator.onLine) {
+        showToast("Sem conexão com a internet");
+        speechServiceOk = false;
+        lastSpeechCheckAt = now;
+        return false;
+      }
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2500);
+        await fetch("https://www.google.com/generate_204", {
+          method: "GET",
+          mode: "no-cors",
+          cache: "no-store",
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        speechServiceOk = true;
+        lastSpeechCheckAt = now;
+        return true;
+      } catch (error) {
+        showToast("Sem conexão com serviço de voz");
+        speechServiceOk = false;
+        lastSpeechCheckAt = now;
+        return false;
+      }
+    }
+
+    function ensureMicPermissionModal() {
+      let modal = document.getElementById("micPermissionModal");
+      if (modal) return modal;
+
+      modal = document.createElement("div");
+      modal.id = "micPermissionModal";
+      modal.className = "mic-permission-modal";
+      modal.innerHTML = `
+        <div class="mic-permission-card" role="dialog" aria-live="polite">
+          <h3>Permitir uso do microfone</h3>
+          <p>Precisamos da sua permissão para converter voz em texto. Clique em Permitir para abrir o pedido do sistema.</p>
+          <div class="mic-permission-actions">
+            <button class="mic-secondary" type="button" data-action="deny">Agora não</button>
+            <button class="mic-primary" type="button" data-action="allow">Permitir</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      return modal;
+    }
+
+    function cleanupMicStream() {
+      if (!micStream) return;
+      micStream.getTracks().forEach(track => track.stop());
+      micStream = null;
     }
 
     function setMicActive(button, isActive) {
@@ -3442,16 +3778,142 @@ RESPONSIVE
       button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     }
 
-    function stopActiveRecognition() {
-      if (!activeRecognition) return;
-      try {
-        activeRecognition.stop();
-      } catch (error) {
-        // Ignore stop errors
+    function scheduleRestart(recognition) {
+      if (!isRecording || !shouldRestart) return;
+      if (restartTimer) clearTimeout(restartTimer);
+      restartTimer = setTimeout(() => {
+        try {
+          recognition.start();
+        } catch (error) {
+          isRecording = false;
+          shouldRestart = false;
+          setMicActive(activeButton, false);
+          cleanupMicStream();
+        }
+      }, 350);
+    }
+
+    function ensureRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return null;
+      if (activeRecognition) return activeRecognition;
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setMicActive(activeButton, true);
+        hadAudioThisSession = false;
+        hadResultThisSession = false;
+      };
+
+      recognition.onaudiostart = () => {
+        hadAudioThisSession = true;
+      };
+
+      recognition.onresult = (event) => {
+        const input = document.getElementById(activeTargetId);
+        if (!input) {
+          showToast("Campo de destino não encontrado");
+          return;
+        }
+        let interimTranscript = "";
+        let finalTranscriptForThisTurn = "";
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const transcript = event.results[i][0]?.transcript || "";
+          if (event.results[i].isFinal) {
+            finalTranscriptForThisTurn += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        if (finalTranscriptForThisTurn) {
+          activeBaseValue = `${activeBaseValue}${finalTranscriptForThisTurn} `;
+        }
+        const nextValue = `${activeBaseValue}${interimTranscript}`.trim();
+        if (!nextValue) return;
+        hadResultThisSession = true;
+        input.value = nextValue;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        autoUpdate();
+      };
+
+      recognition.onerror = (event) => {
+        if (event && (event.error === 'not-allowed' || event.error === 'service-not-allowed')) {
+          alert("Permissão de microfone negada.");
+          isRecording = false;
+          shouldRestart = false;
+          setMicActive(activeButton, false);
+          cleanupMicStream();
+          return;
+        }
+        if (event && event.error === 'audio-capture') {
+          alert("Nenhum microfone foi encontrado.");
+          isRecording = false;
+          shouldRestart = false;
+          setMicActive(activeButton, false);
+          cleanupMicStream();
+          return;
+        }
+        if (event && event.error === 'network') {
+          showToast("Sem conexão com o serviço de voz");
+          isRecording = false;
+          shouldRestart = false;
+          setMicActive(activeButton, false);
+          cleanupMicStream();
+          return;
+        }
+        if (event && (event.error === 'no-speech' || event.error === 'aborted' || event.error === 'network')) {
+          scheduleRestart(recognition);
+          return;
+        }
+        scheduleRestart(recognition);
+      };
+
+      recognition.onend = () => {
+        if (!isRecording || !shouldRestart) {
+          setMicActive(activeButton, false);
+          cleanupMicStream();
+          return;
+        }
+        if (hadAudioThisSession && !hadResultThisSession) {
+          showToast("Áudio detectado, mas sem transcrição");
+        }
+        const currentInput = document.getElementById(activeTargetId);
+        activeBaseValue = currentInput && currentInput.value ? `${currentInput.value.trim()} ` : "";
+        activeFinalTranscript = "";
+        scheduleRestart(recognition);
+      };
+
+      activeRecognition = recognition;
+      return recognition;
+    }
+
+    function stopRecognition(userStop = false) {
+      isRecording = false;
+      shouldRestart = false;
+      if (restartTimer) {
+        clearTimeout(restartTimer);
+        restartTimer = null;
       }
+      if (activeRecognition) {
+        try {
+          activeRecognition.stop();
+        } catch (error) {
+          // Ignore stop errors
+        }
+        activeRecognition = null;
+      }
+      stopVoskCapture();
       setMicActive(activeButton, false);
-      activeRecognition = null;
+      if (userStop) cleanupMicStream();
       activeButton = null;
+      activeTargetId = null;
+      activeFinalTranscript = "";
     }
 
     /**
@@ -3459,56 +3921,93 @@ RESPONSIVE
      * @param {string} targetId - Input id
      * @param {HTMLButtonElement} button - Microphone button
      */
-    async function startVoiceInput(targetId, button) {
+    async function startVoiceInput(targetId, button, skipPermission = false) {
       const input = document.getElementById(targetId);
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!input) return;
-      if (!SpeechRecognition) {
-        alert("Reconhecimento de voz não suportado neste navegador.");
+
+      if (!skipPermission && !micPermissionGranted) {
+        const allowed = await requestMicPermission();
+        if (!allowed) return;
+        return startVoiceInput(targetId, button, true);
+      }
+
+      if (isRecording && activeButton === button) {
+        stopRecognition(true);
         return;
       }
 
-      const allowed = await requestMicPermission();
-      if (!allowed) return;
-
-      if (activeRecognition) {
-        if (activeButton === button) {
-          stopActiveRecognition();
-          return;
-        }
-        stopActiveRecognition();
+      if (isRecording && activeButton !== button) {
+        stopRecognition(true);
+        pendingStart = { targetId, button };
+        setTimeout(() => {
+          if (pendingStart) {
+            const next = pendingStart;
+            pendingStart = null;
+            startVoiceInput(next.targetId, next.button);
+          }
+        }, 200);
+        return;
       }
 
-      const recognition = new SpeechRecognition();
-      activeRecognition = recognition;
-      activeButton = button;
+      if (!forceOnlineOnly) {
+        const offlineReady = await ensureVoskReadyWithTimeout(offlineInitTimeoutMs);
+        if (offlineReady) {
+          try {
+            micStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+          } catch (error) {
+            alert("Permissão de microfone negada.");
+            return;
+          }
 
-      recognition.lang = 'pt-BR';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
+          activeButton = button;
+          activeTargetId = targetId;
+          activeBaseValue = input.value ? `${input.value.trim()} ` : "";
+          activeFinalTranscript = "";
+          isRecording = true;
+          shouldRestart = false;
 
-      setMicActive(button, true);
-
-      recognition.onresult = (event) => {
-        const text = event.results?.[0]?.[0]?.transcript || "";
-        if (!text) return;
-        input.value = text.trim();
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        autoUpdate();
-      };
-
-      recognition.onerror = () => {
-        stopActiveRecognition();
-      };
-
-      recognition.onend = () => {
-        if (activeRecognition === recognition) {
-          stopActiveRecognition();
+          setMicActive(activeButton, true);
+          const captureOk = startVoskCapture(micStream);
+          if (!captureOk) {
+            stopRecognition(true);
+          }
+          return;
         }
-      };
+        if (!allowOnlineFallback) {
+          if (!window.Vosk) {
+            showToast("Motor offline indisponível.");
+          }
+          return;
+        }
+        showToast("Offline indisponível, usando online");
+      }
 
-      recognition.start();
+      const streamOk = await ensureMicStream();
+      if (!streamOk) return;
+      const speechOk = await checkSpeechService();
+      if (!speechOk) return;
+
+      activeButton = button;
+      activeTargetId = targetId;
+      activeBaseValue = input.value ? `${input.value.trim()} ` : "";
+      activeFinalTranscript = "";
+      isRecording = true;
+      shouldRestart = true;
+
+      const recognition = ensureRecognition();
+      if (!recognition) {
+        alert("Reconhecimento de voz não suportado neste navegador.");
+        isRecording = false;
+        shouldRestart = false;
+        cleanupMicStream();
+        return;
+      }
+
+      try {
+        recognition.start();
+      } catch (error) {
+        stopRecognition(true);
+      }
     }
 
     /**

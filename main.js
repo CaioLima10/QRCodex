@@ -1,19 +1,23 @@
 'use strict';
 
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, session, systemPreferences } = require("electron");
 const path = require("path");
 
+app.commandLine.appendSwitch("enable-speech-dispatcher");
+app.commandLine.appendSwitch("enable-features", "WebSpeechAPI");
+app.commandLine.appendSwitch("unsafely-treat-insecure-origin-as-secure", "file://");
+app.commandLine.appendSwitch("allow-file-access-from-files");
+
+const ICON_PATHS = {
+  win32: "build/app.ico",
+  linux: "build/icon.png",
+  darwin: "build/app.icns",
+  default: "build/app.ico"
+};
+
 function getAppIcon() {
-  if (process.platform === "win32") {
-    return path.join(__dirname, "build", "app.ico");
-  }
-  if (process.platform === "linux") {
-    return path.join(__dirname, "build", "icon.png");
-  }
-  if (process.platform === "darwin") {
-    return path.join(__dirname, "build", "app.icns");
-  }
-  return path.join(__dirname, "build", "app.ico");
+  const rel = ICON_PATHS[process.platform] || ICON_PATHS.default;
+  return path.join(__dirname, rel);
 }
 
 let mainWindow;
@@ -78,8 +82,48 @@ function setupAutoUpdater() {
   }
 }
 
+function setupMediaPermissions() {
+  const ses = session.defaultSession;
+  if (!ses) return;
+
+  ses.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  );
+  ses.webRequest.onBeforeSendHeaders(
+    {
+      urls: ["https://*.googleapis.com/*", "https://www.google.com/*"]
+    },
+    (details, callback) => {
+      details.requestHeaders["User-Agent"] =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+      callback({ cancel: false, requestHeaders: details.requestHeaders });
+    }
+  );
+
+  ses.setPermissionRequestHandler((_, permission, callback) => {
+    if (permission === "microphone" || permission === "media" || permission === "audioCapture") {
+      callback(true);
+      return;
+    }
+    callback(false);
+  });
+
+  if (typeof ses.setPermissionCheckHandler === "function") {
+    ses.setPermissionCheckHandler((_wc, permission) => {
+      if (permission === "microphone" || permission === "media" || permission === "audioCapture") {
+        return true;
+      }
+      return false;
+    });
+  }
+}
+
 app.whenReady().then(() => {
 
+  setupMediaPermissions();
+  if (process.platform === "darwin" && typeof systemPreferences.askForMediaAccess === "function") {
+    systemPreferences.askForMediaAccess("microphone");
+  }
   createWindow();
   setupAutoUpdater();
 

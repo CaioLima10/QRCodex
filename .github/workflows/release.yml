@@ -34,6 +34,8 @@ jobs:
           path: |
             dist/*.exe
             dist/*.zip
+            dist/*.yml
+            dist/*.blockmap
 
   build-linux:
     runs-on: ubuntu-latest
@@ -61,6 +63,8 @@ jobs:
           path: |
             dist/*.AppImage
             dist/*.deb
+            dist/*.yml
+            dist/*.blockmap
 
   build-macos:
     runs-on: macos-latest
@@ -85,4 +89,24 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: holiver-qrcode-mac-release
-          path: dist/*.dmg
+          path: |
+            dist/*.dmg
+            dist/*.yml
+            dist/*.blockmap
+
+  create-release:
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

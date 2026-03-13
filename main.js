@@ -1,6 +1,7 @@
 'use strict';
 
 const { app, BrowserWindow } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const path = require("path");
 
 let mainWindow;
@@ -52,10 +53,18 @@ function createWindow() {
 
 }
 
+function setupAutoUpdater() {
+  if (!app.isPackaged) return;
+  autoUpdater.autoDownload = true;
+  autoUpdater.checkForUpdatesAndNotify().catch((error) => {
+    console.error("Auto-update failed:", error);
+  });
+}
 
 app.whenReady().then(() => {
 
   createWindow();
+  setupAutoUpdater();
 
   app.on("activate", function () {
     if (BrowserWindow.getAllWindows().length === 0) {

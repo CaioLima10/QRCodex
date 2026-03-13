@@ -4,12 +4,15 @@ on:
   push:
     tags:
       - 'v*'
+  release:
+    types: [created]
 
 permissions:
   contents: write
 
 jobs:
   build-windows:
+    if: ${{ github.event_name != 'release' || github.actor != 'github-actions[bot]' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +45,7 @@ jobs:
           if-no-files-found: error
 
   build-linux:
+    if: ${{ github.event_name != 'release' || github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +76,7 @@ jobs:
           if-no-files-found: error
 
   build-macos:
+    if: ${{ github.event_name != 'release' || github.actor != 'github-actions[bot]' }}
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +106,7 @@ jobs:
           if-no-files-found: error
 
   create-release:
+    if: ${{ github.event_name != 'release' || github.actor != 'github-actions[bot]' }}
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
@@ -118,8 +124,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+          name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
           generate_release_notes: true
           files: release/**/*
           fail_on_unmatched_files: true

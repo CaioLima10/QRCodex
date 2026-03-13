@@ -1,3 +1,10 @@
+#!/usr/bin/env node
+
+/**
+ * GERAR ARQUIVO ICO
+ * Converte logo.png para app.ico multi-tamanho
+ */
+
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");

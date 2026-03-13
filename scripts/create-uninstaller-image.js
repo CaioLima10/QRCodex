@@ -1,3 +1,10 @@
+#!/usr/bin/env node
+
+/**
+ * CRIAR IMAGEM PARA DESINSTALADOR
+ * Gera imagem personalizada para tela final
+ */
+
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");

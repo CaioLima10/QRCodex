@@ -1,3 +1,10 @@
+#!/usr/bin/env node
+
+/**
+ * VALIDAÇÃO MULTIPLATAFORMA
+ * Verifica configurações para Windows, Linux e macOS
+ */
+
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
@@ -12,10 +19,10 @@ let validationWarnings = [];
 
 function validatePlatformSupport() {
   console.log("🔧 Validando suporte às plataformas...");
-  
+
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const buildConfig = packageJson.build;
-  
+
   if (!buildConfig) {
     validationErrors.push("❌ Configuração de build ausente");
     return;
@@ -63,7 +70,7 @@ function validatePlatformSupport() {
 
 function validateAssets() {
   console.log("\n📦 Validando assets multiplataforma...");
-  
+
   const buildDir = path.join(projectRoot, "build");
   const requiredAssets = [
     { file: "app.ico", platforms: ["Windows"] },
@@ -84,7 +91,7 @@ function validateAssets() {
 
 function validateNodeModules() {
   console.log("\n📚 Validando dependências multiplataforma...");
-  
+
   const criticalModules = [
     "electron",
     "electron-builder",
@@ -105,10 +112,10 @@ function validateNodeModules() {
 
 function validateBuildScripts() {
   console.log("\n📜 Validando scripts de build...");
-  
+
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const scripts = packageJson.scripts;
-  
+
   const requiredScripts = [
     "start",
     "build",
@@ -129,11 +136,11 @@ function validateBuildScripts() {
 
 function validateLoadingSystem() {
   console.log("\n⏱️ Validando sistema de loading multiplataforma...");
-  
+
   const mainJsPath = path.join(projectRoot, "main.js");
   if (fs.existsSync(mainJsPath)) {
     const mainJs = fs.readFileSync(mainJsPath, 'utf8');
-    
+
     // Validar tempo exato
     if (!mainJs.includes("3750")) {
       validationErrors.push("❌ Tempo de loading incorreto (deve ser 3750ms)");
@@ -161,13 +168,13 @@ function validateLoadingSystem() {
 
 function testBuildCommands() {
   console.log("\n🔨 Testando comandos de build...");
-  
+
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const scripts = packageJson.scripts;
-  
+
   // Testar se os comandos são válidos
   const testCommands = ["validate"];
-  
+
   testCommands.forEach(command => {
     if (scripts[command]) {
       // Simular validação do comando
@@ -182,9 +189,9 @@ function testBuildCommands() {
 
 function validateElectronConfig() {
   console.log("\n⚡ Validando configuração Electron...");
-  
+
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  
+
   if (!packageJson.main) {
     validationErrors.push("❌ Arquivo main não configurado");
   } else {

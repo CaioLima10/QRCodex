@@ -1,3 +1,10 @@
+#!/usr/bin/env node
+
+/**
+ * TESTE COMPLETO DO SISTEMA
+ * Executa todas as validações em sequência
+ */
+
 const { spawnSync } = require("child_process");
 const path = require("path");
 
@@ -9,7 +16,7 @@ const projectRoot = path.join(__dirname, "..");
 function runScript(scriptName, description) {
   console.log(`\n📋 ${description}`);
   console.log("=".repeat(description.length + 4));
-  
+
   const result = spawnSync("node", [scriptName], {
     cwd: projectRoot,
     stdio: "inherit",
@@ -31,7 +38,7 @@ function main() {
       description: "Validação de Build (Assets, Loading, Dependências)"
     },
     {
-      script: "scripts/validate-platform.js", 
+      script: "scripts/validate-platform.js",
       description: "Validação Multiplataforma (Windows, Linux, macOS)"
     }
   ];
@@ -44,14 +51,14 @@ function main() {
   // Teste específico do loading
   console.log("\n⏱️ Teste específico do sistema de loading");
   console.log("=".repeat(45));
-  
+
   const fs = require("fs");
   const mainJsPath = path.join(projectRoot, "main.js");
   const mainJs = fs.readFileSync(mainJsPath, 'utf8');
-  
-  if (mainJs.includes("3750") && 
-      mainJs.includes("splash.loadFile") && 
-      mainJs.includes("splash.destroy()")) {
+
+  if (mainJs.includes("3750") &&
+    mainJs.includes("splash.loadFile") &&
+    mainJs.includes("splash.destroy()")) {
     console.log("✅ Sistema de loading validado (3750ms + ordem correta)");
   } else {
     console.log("❌ Sistema de loading com problemas");

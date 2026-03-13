@@ -1,3 +1,10 @@
+#!/usr/bin/env node
+
+/**
+ * EXECUTAR ELECTRON BUILDER
+ * Wrapper para garantir ambiente correto no Windows
+ */
+
 const path = require("path");
 const { spawnSync } = require("child_process");
 

@@ -1,3 +1,10 @@
+#!/usr/bin/env node
+
+/**
+ * VALIDAÇÃO DE BUILD (simulação CI/CD)
+ * Verifica assets, arquivos e processo de build
+ */
+
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");

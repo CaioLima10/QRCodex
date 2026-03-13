@@ -4,6 +4,19 @@ const { app, BrowserWindow } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 
+function getAppIcon() {
+  if (process.platform === "win32") {
+    return path.join(__dirname, "build", "app.ico");
+  }
+  if (process.platform === "linux") {
+    return path.join(__dirname, "build", "icon.png");
+  }
+  if (process.platform === "darwin") {
+    return path.join(__dirname, "build", "app.icns");
+  }
+  return path.join(__dirname, "build", "app.ico");
+}
+
 let mainWindow;
 let splash;
 
@@ -20,7 +33,7 @@ function createWindow() {
     hasShadow: true,
     autoHideMenuBar: true,
     backgroundColor: "#090A0C",
-    icon: path.join(__dirname, "build/app.ico")
+    icon: getAppIcon()
   });
 
   splash.loadFile("splash.html");
@@ -34,7 +47,7 @@ function createWindow() {
       mainWindow = new BrowserWindow({
         width: 1000,
         height: 800,
-        icon: path.join(__dirname, "build/app.ico"),
+        icon: getAppIcon(),
         autoHideMenuBar: true,
         show: false
       });
@@ -65,6 +78,13 @@ app.whenReady().then(() => {
 
   createWindow();
   setupAutoUpdater();
+
+  app.on("browser-window-created", (_event, window) => {
+    const iconPath = getAppIcon();
+    if (typeof window.setIcon === "function") {
+      window.setIcon(iconPath);
+    }
+  });
 
   app.on("activate", function () {
     if (BrowserWindow.getAllWindows().length === 0) {

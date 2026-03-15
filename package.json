@@ -1,7 +1,7 @@
 {
   "name": "holiver-qrcode",
   "productName": "HoliverQRCode",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "QR Code Generator",
   "author": "Caio",
   "main": "main.js",
@@ -79,8 +79,7 @@
         "portable",
         "zip"
       ],
-      "icon": "build/app.ico",
-      "signAndEditExecutable": false
+      "icon": "build/app.ico"
     },
     "linux": {
       "maintainer": "Caio",
@@ -107,6 +106,8 @@
       "installerIcon": "build/app.ico",
       "uninstallerIcon": "build/app.ico",
       "installerHeaderIcon": "build/app.ico",
+      "installerSidebar": "Unistall.png",
+      "uninstallerSidebar": "Unistall.png",
       "uninstallDisplayName": "HoliverQRCode",
       "deleteAppDataOnUninstall": true,
       "runAfterFinish": true,

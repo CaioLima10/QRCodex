@@ -1,0 +1,280 @@
+name: 🚀 Build v2.x Series
+
+on:
+  push:
+    tags:
+      - "v2.*"
+    branches-ignore:
+      - main
+      - master
+      - develop
+
+env:
+  NODE_VERSION: '20'
+  APP_NAME: 'HoliverQRCode'
+
+jobs:
+  # ==========================================
+  # VALIDAÇÃO E QUALIDADE
+  # ==========================================
+  validate:
+    name: 🔍 Validação v2.x
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.changes.outputs.should_build }}
+      version_tag: ${{ steps.changes.outputs.version }}
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏷️ Get Version
+        id: changes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "should_build=true" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Building version: $VERSION"
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🔍 GitHub Actions Validation
+        run: npm run github-actions-test
+
+      - name: 🏗️ Build Validation
+        run: npm run validate
+
+      - name: 💻 Platform Validation
+        run: npm run validate-platform
+
+      - name: 🧪 Professional Tests
+        run: npm run test-professional
+
+      - name: 🛡️ Human Error Tests
+        run: npm run test-human-error
+
+      - name: 📝 Code Quality Tests
+        run: npm run code-quality-test
+
+      - name: 🔍 Lint Tests
+        run: npm run lint-test
+
+      - name: 🎯 Final Validation
+        run: npm run test-final
+
+  # ==========================================
+  # BUILD WINDOWS v2.x
+  # ==========================================
+  build-windows:
+    name: 🪟 Windows Build v2.x
+    needs: validate
+    if: needs.validate.outputs.should_build == 'true'
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: win32
+          - arch: x86
+            platform: win32
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🛠️ Install NSIS
+        run: |
+          choco install nsis -y
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $nsisVersion = & "C:\Program Files (x86)\NSIS\makensis.exe" /VERSION
+          echo "NSIS Version: $nsisVersion"
+
+      - name: 🏗️ Build Electron App
+        run: npm run win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Build NSIS Installer
+        run: |
+          npm run build-nsis
+          echo "✅ NSIS Installer built successfully!"
+
+      - name: 📊 Generate Build Info
+        run: |
+          echo "## 📊 Build Information v${{ needs.validate.outputs.version_tag }}" > build-info.md
+          echo "" >> build-info.md
+          echo "**Platform:** Windows ${{ matrix.arch }}" >> build-info.md
+          echo "**Node.js:** ${{ env.NODE_VERSION }}" >> build-info.md
+          echo "**Date:** $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')" >> build-info.md
+          echo "**Commit:** ${{ github.sha }}" >> build-info.md
+          echo "**Branch:** ${{ github.ref_name }}" >> build-info.md
+          echo "**Version:** ${{ needs.validate.outputs.version_tag }}" >> build-info.md
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-win-${{ matrix.arch }}-${{ needs.validate.outputs.version_tag }}
+          path: |
+            dist/*.exe
+            dist/*.zip
+            *.exe
+            build-info.md
+          retention-days: 30
+
+  # ==========================================
+  # BUILD LINUX v2.x
+  # ==========================================
+  build-linux:
+    name: 🐧 Linux Build v2.x
+    needs: validate
+    if: needs.validate.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: linux
+          - arch: arm64
+            platform: linux
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🏗️ Build Electron App
+        run: npm run linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Generate Build Info
+        run: |
+          echo "## 📊 Build Information v${{ needs.validate.outputs.version_tag }}" > build-info.md
+          echo "" >> build-info.md
+          echo "**Platform:** Linux ${{ matrix.arch }}" >> build-info.md
+          echo "**Node.js:** ${{ env.NODE_VERSION }}" >> build-info.md
+          echo "**Date:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> build-info.md
+          echo "**Commit:** ${{ github.sha }}" >> build-info.md
+          echo "**Branch:** ${{ github.ref_name }}" >> build-info.md
+          echo "**Version:** ${{ needs.validate.outputs.version_tag }}" >> build-info.md
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-linux-${{ matrix.arch }}-${{ needs.validate.outputs.version_tag }}
+          path: |
+            dist/*.AppImage
+            dist/*.tar.gz
+            build-info.md
+          retention-days: 30
+
+  # ==========================================
+  # BUILD MAC v2.x
+  # ==========================================
+  build-mac:
+    name: 🍎 macOS Build v2.x
+    needs: validate
+    if: needs.validate.outputs.should_build == 'true'
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: darwin
+          - arch: arm64
+            platform: darwin
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🏗️ Build Electron App
+        run: npm run mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Generate Build Info
+        run: |
+          echo "## 📊 Build Information v${{ needs.validate.outputs.version_tag }}" > build-info.md
+          echo "" >> build-info.md
+          echo "**Platform:** macOS ${{ matrix.arch }}" >> build-info.md
+          echo "**Node.js:** ${{ env.NODE_VERSION }}" >> build-info.md
+          echo "**Date:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> build-info.md
+          echo "**Commit:** ${{ github.sha }}" >> build-info.md
+          echo "**Branch:** ${{ github.ref_name }}" >> build-info.md
+          echo "**Version:** ${{ needs.validate.outputs.version_tag }}" >> build-info.md
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-mac-${{ matrix.arch }}-${{ needs.validate.outputs.version_tag }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            build-info.md
+          retention-days: 30
+
+  # ==========================================
+  # BUILD SUMMARY v2.x
+  # ==========================================
+  build-summary:
+    name: 📊 Build Summary v2.x
+    needs: [validate, build-windows, build-linux, build-mac]
+    if: always() && needs.validate.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📊 Generate Summary
+        run: |
+          echo "## 🚀 HoliverQRCode Build Summary v${{ needs.validate.outputs.version_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 **Validation:** ${{ needs.validate.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🪟 **Windows:** ${{ needs.build-windows.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐧 **Linux:** ${{ needs.build-linux.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🍎 **macOS:** ${{ needs.build-mac.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Platform Matrix v${{ needs.validate.outputs.version_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows ${{ needs.build-windows.result == 'success' && '✅' || '❌' }} | ${{ needs.build-windows.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux ${{ needs.build-linux.result == 'success' && '✅' || '❌' }} | ${{ needs.build-linux.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS ${{ needs.build-mac.result == 'success' && '✅' || '❌' }} | ${{ needs.build-mac.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- 📥 **Tag:** [${{ needs.validate.outputs.version_tag }}](https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.version_tag }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌿 **Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌿 **Branch:** [${{ github.ref_name }}](https://github.com/${{ github.repository }}/tree/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY

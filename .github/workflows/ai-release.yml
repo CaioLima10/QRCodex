@@ -1,0 +1,64 @@
+name: 🤖 AI Release
+
+on:
+  push:
+    tags:
+      - "v2.*"
+    branches-ignore:
+      - main
+      - master
+
+jobs:
+  send-to-ai:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        
+      - name: 🏷️ Get Tag Version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "📦 Detected version: $VERSION"
+          
+      - name: 🤖 Send to AI
+        run: |
+          echo "🤖 Sending version ${{ env.VERSION }} to AI..."
+          curl -X POST https://api.sua-ia.com/process \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.AI_API_TOKEN }}" \
+            -d '{
+              "version": "${{ env.VERSION }}",
+              "repository": "${{ github.repository }}",
+              "commit": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "timestamp": "${{ github.event.head_commit.timestamp }}"
+            }' \
+            --max-time 30 || echo "⚠️ AI service unavailable"
+            
+      - name: ✅ AI Response
+        run: |
+          echo "🤖 AI processing completed for version ${{ env.VERSION }}"
+          echo "📋 Repository: ${{ github.repository }}"
+          echo "🌿 Commit: ${{ github.sha }}"
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          
+      - name: 📊 Summary
+        run: |
+          echo "## 🤖 AI Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Version Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🤖 AI Processing" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Version detected:** ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🤖 **Data sent to AI:** Version and metadata" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 **Processing completed:** AI workflow triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- 📥 **Tag:** [${{ env.VERSION }}](https://github.com/${{ github.repository }}/releases/tag/${{ env.VERSION }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌿 **Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY

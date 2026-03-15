@@ -121,11 +121,11 @@ function setupMediaPermissions() {
 }
 
 app.whenReady().then(() => {
-
   setupMediaPermissions();
   if (process.platform === "darwin" && typeof systemPreferences.askForMediaAccess === "function") {
     systemPreferences.askForMediaAccess("microphone");
   }
+
   createWindow();
   setupAutoUpdater();
 

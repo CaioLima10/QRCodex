@@ -59,6 +59,15 @@ UninstallIcon "app.ico"
 ; --- FUNÇÃO DE INICIALIZAÇÃO ---
 Function .onInit
   !insertmacro MUI_LANGDLL_DISPLAY
+  
+  ; Salvar idioma escolhido no registro
+  ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "Language"
+  ${If} $0 == ""
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "Language" "$LANGUAGE"
+  ${EndIf}
+  
+  ; Também salvar em chave separada para fácil acesso do app
+  WriteRegStr HKLM "Software\HoliverQRCode" "Language" "$LANGUAGE"
 FunctionEnd
 Section "HoliverQRCode" SecMain
     SetOutPath "$INSTDIR"
@@ -77,7 +86,7 @@ Section "HoliverQRCode" SecMain
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "UninstallString" "$INSTDIR\Uninstall.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayIcon" "$INSTDIR\HoliverQRCode.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "Publisher" "Holiver Core"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "2.0.2"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "2.0.3"
 SectionEnd
 
 ; --- SEÇÃO DE DESINSTALAÇÃO ---

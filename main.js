@@ -3,12 +3,33 @@
 const { app, BrowserWindow, session, systemPreferences } = require("electron");
 const path = require("path");
 const { version } = require('./package.json');
+const { initializeLanguage, getCurrentLanguage, t } = require('./language-manager');
 
 // Verificar flag --version
 if (process.argv.includes('--version') || process.argv.includes('-v')) {
   console.log(`HoliverQRCode v${version}`);
   process.exit(0);
 }
+
+// Inicializar sistema de idiomas
+initializeLanguage();
+
+// IPC handlers para idiomas
+const { ipcMain } = require('electron');
+
+ipcMain.handle('get-current-language', () => {
+  return getCurrentLanguage();
+});
+
+ipcMain.handle('get-translations', () => {
+  const { languageManager } = require('./language-manager');
+  return languageManager.translations;
+});
+
+ipcMain.handle('set-language', (event, langCode) => {
+  const { setLanguage } = require('./language-manager');
+  return setLanguage(langCode);
+});
 
 const ICON_PATHS = {
   win32: "build/app.ico",

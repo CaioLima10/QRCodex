@@ -1,97 +1,289 @@
-name: Build Multiplatform
+name: 🚀 Build Multiplatform
 
 on:
   push:
+    branches: [ main, master, develop ]
+  pull_request:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Tipo de build'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - windows-only
+        - linux-only
+        - mac-only
+
+env:
+  NODE_VERSION: '20'
+  APP_NAME: 'HoliverQRCode'
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  # ==========================================
+  # VALIDAÇÃO E QUALIDADE
+  # ==========================================
+  validate:
+    name: 🔍 Validação e Qualidade
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.changes.outputs.should_build }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
-      - name: Install dependencies
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
         run: npm ci
-      - name: Install NSIS
-        run: |
-          choco install nsis
-          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: GitHub Actions Validation
+
+      - name: 🔍 GitHub Actions Validation
         run: npm run github-actions-test
-      - name: Validate build
+
+      - name: 🏗️ Build Validation
         run: npm run validate
-      - name: Validate platform
+
+      - name: 💻 Platform Validation
         run: npm run validate-platform
-      - name: Build Windows
+
+      - name: 🧪 Professional Tests
+        run: npm run test-professional
+
+      - name: 🛡️ Human Error Tests
+        run: npm run test-human-error
+
+      - name: 📝 Code Quality Tests
+        run: npm run code-quality-test
+
+      - name: 🔍 Lint Tests
+        run: npm run lint-test
+
+      - name: 🎯 Final Validation
+        run: npm run test-final
+
+      - name: 📊 Check Changes
+        id: changes
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ==========================================
+  # BUILD WINDOWS
+  # ==========================================
+  build-windows:
+    name: 🪟 Windows Build
+    needs: validate
+    if: needs.validate.outputs.should_build == 'true' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'windows-only' || github.event.inputs.build_type == '')
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: win32
+          - arch: x86
+            platform: win32
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🛠️ Install NSIS
+        run: |
+          choco install nsis -y
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          nsis_version = & "C:\Program Files (x86)\NSIS\makensis.exe" /VERSION
+          echo "NSIS Version: $nsis_version"
+
+      - name: 🏗️ Build Electron App
         run: npm run win
-      - name: Build NSIS Installer
-        run: npm run build-nsis
-      - name: Upload Windows artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Build NSIS Installer
+        run: |
+          npm run build-nsis
+          echo "✅ NSIS Installer built successfully!"
+
+      - name: 📊 Generate Build Info
+        run: |
+          echo "## 📊 Build Information" > build-info.md
+          echo "" >> build-info.md
+          echo "**Platform:** Windows ${{ matrix.arch }}" >> build-info.md
+          echo "**Node.js:** ${{ env.NODE_VERSION }}" >> build-info.md
+          echo "**Date:** $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')" >> build-info.md
+          echo "**Commit:** ${{ github.sha }}" >> build-info.md
+          echo "**Branch:** ${{ github.ref_name }}" >> build-info.md
+
+      - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: holiver-qrcode-win
+          name: ${{ env.APP_NAME }}-win-${{ matrix.arch }}
           path: |
             dist/*.exe
             dist/*.zip
             *.exe
+            build-info.md
+          retention-days: 30
 
+  # ==========================================
+  # BUILD LINUX
+  # ==========================================
   build-linux:
+    name: 🐧 Linux Build
+    needs: validate
+    if: needs.validate.outputs.should_build == 'true' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'linux-only' || github.event.inputs.build_type == '')
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: linux
+          - arch: arm64
+            platform: linux
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
-      - name: Install dependencies
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
         run: npm ci
-      - name: GitHub Actions Validation
-        run: npm run github-actions-test
-      - name: Validate build
-        run: npm run validate
-      - name: Validate platform
-        run: npm run validate-platform
-      - name: Build Linux
+
+      - name: 🏗️ Build Electron App
         run: npm run linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload Linux artifacts
+
+      - name: 📊 Generate Build Info
+        run: |
+          echo "## 📊 Build Information" > build-info.md
+          echo "" >> build-info.md
+          echo "**Platform:** Linux ${{ matrix.arch }}" >> build-info.md
+          echo "**Node.js:** ${{ env.NODE_VERSION }}" >> build-info.md
+          echo "**Date:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> build-info.md
+          echo "**Commit:** ${{ github.sha }}" >> build-info.md
+          echo "**Branch:** ${{ github.ref_name }}" >> build-info.md
+
+      - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: holiver-qrcode-linux
+          name: ${{ env.APP_NAME }}-linux-${{ matrix.arch }}
           path: |
             dist/*.AppImage
-            dist/*.deb
+            dist/*.tar.gz
+            build-info.md
+          retention-days: 30
 
-  build-macos:
+  # ==========================================
+  # BUILD MAC
+  # ==========================================
+  build-mac:
+    name: 🍎 macOS Build
+    needs: validate
+    if: needs.validate.outputs.should_build == 'true' && (github.event.inputs.build_type == 'all' || github.event.inputs.build_type == 'mac-only' || github.event.inputs.build_type == '')
     runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: darwin
+          - arch: arm64
+            platform: darwin
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
-      - name: Install dependencies
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
         run: npm ci
-      - name: GitHub Actions Validation
-        run: npm run github-actions-test
-      - name: Validate build
-        run: npm run validate
-      - name: Validate platform
-        run: npm run validate-platform
-      - name: Build macOS
+
+      - name: 🏗️ Build Electron App
         run: npm run mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload macOS artifacts
+
+      - name: 📊 Generate Build Info
+        run: |
+          echo "## 📊 Build Information" > build-info.md
+          echo "" >> build-info.md
+          echo "**Platform:** macOS ${{ matrix.arch }}" >> build-info.md
+          echo "**Node.js:** ${{ env.NODE_VERSION }}" >> build-info.md
+          echo "**Date:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> build-info.md
+          echo "**Commit:** ${{ github.sha }}" >> build-info.md
+          echo "**Branch:** ${{ github.ref_name }}" >> build-info.md
+
+      - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: holiver-qrcode-mac
-          path: dist/*.dmg
+          name: ${{ env.APP_NAME }}-mac-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            build-info.md
+          retention-days: 30
+
+  # ==========================================
+  # BUILD SUMMARY
+  # ==========================================
+  build-summary:
+    name: 📊 Build Summary
+    needs: [validate, build-windows, build-linux, build-mac]
+    if: always() && needs.validate.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📊 Generate Summary
+        run: |
+          echo "## 🚀 HoliverQRCode Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 **Validation:** ${{ needs.validate.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🪟 **Windows:** ${{ needs.build-windows.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐧 **Linux:** ${{ needs.build-linux.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🍎 **macOS:** ${{ needs.build-mac.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Platform Matrix" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows ${{ needs.build-windows.result == 'success' && '✅' || '❌' }} | ${{ needs.build-windows.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux ${{ needs.build-linux.result == 'success' && '✅' || '❌' }} | ${{ needs.build-linux.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS ${{ needs.build-mac.result == 'success' && '✅' || '❌' }} | ${{ needs.build-mac.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- 📥 **Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌿 **Branch:** [${{ github.ref_name }}](https://github.com/${{ github.repository }}/tree/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY

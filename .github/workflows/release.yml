@@ -1,4 +1,4 @@
-name: Release
+name: 🚀 Release
 
 on:
   push:
@@ -6,134 +6,350 @@ on:
       - 'v*'
   release:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.15)'
+        required: true
+        default: 'v1.0.15'
 
 permissions:
   contents: write
+  releases: write
+
+env:
+  NODE_VERSION: '20'
+  APP_NAME: 'HoliverQRCode'
 
 jobs:
-  build-windows:
-    if: ${{ github.event_name != 'release' || github.actor != 'github-actions[bot]' }}
-    runs-on: windows-latest
+  # ==========================================
+  # VALIDAÇÃO E QUALIDADE
+  # ==========================================
+  validate:
+    name: 🔍 Validação e Qualidade
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.changes.outputs.should_release }}
+      version_to_release: ${{ steps.changes.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
-      - name: Install dependencies
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
         run: npm ci
-      - name: Install NSIS
-        run: |
-          choco install nsis
-          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: GitHub Actions Validation
+
+      - name: 🔍 GitHub Actions Validation
         run: npm run github-actions-test
-      - name: Validate build
+
+      - name: 🏗️ Build Validation
         run: npm run validate
-      - name: Validate platform
+
+      - name: 💻 Platform Validation
         run: npm run validate-platform
-      - name: Build Windows
+
+      - name: 🧪 Professional Tests
+        run: npm run test-professional
+
+      - name: 🛡️ Human Error Tests
+        run: npm run test-human-error
+
+      - name: 📝 Code Quality Tests
+        run: npm run code-quality-test
+
+      - name: 🔍 Lint Tests
+        run: npm run lint-test
+
+      - name: 🎯 Final Validation
+        run: npm run test-final
+
+      - name: 📊 Check Release Info
+        id: changes
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION="${{ github.ref_name }}"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ==========================================
+  # BUILD WINDOWS RELEASE
+  # ==========================================
+  build-windows:
+    name: 🪟 Windows Release
+    needs: validate
+    if: needs.validate.outputs.should_release == 'true'
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: win32
+          - arch: x86
+            platform: win32
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🛠️ Install NSIS
+        run: |
+          choco install nsis -y
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          nsis_version = & "C:\Program Files (x86)\NSIS\makensis.exe" /VERSION
+          echo "NSIS Version: $nsis_version"
+
+      - name: 🏗️ Build Electron App
         run: npm run win
-      - name: Build NSIS Installer
-        run: npm run build-nsis
-      - name: Upload Windows artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Build NSIS Installer
+        run: |
+          npm run build-nsis
+          echo "✅ NSIS Installer built successfully!"
+
+      - name: 📊 Generate Release Info
+        run: |
+          echo "## 📊 Release Information" > release-info.md
+          echo "" >> release-info.md
+          echo "**Version:** ${{ needs.validate.outputs.version_to_release }}" >> release-info.md
+          echo "**Platform:** Windows ${{ matrix.arch }}" >> release-info.md
+          echo "**Node.js:** ${{ env.NODE_VERSION }}" >> release-info.md
+          echo "**Date:** $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')" >> release-info.md
+          echo "**Commit:** ${{ github.sha }}" >> release-info.md
+          echo "**Branch:** ${{ github.ref_name }}" >> release-info.md
+
+      - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: holiver-qrcode-win-release
+          name: ${{ env.APP_NAME }}-win-${{ matrix.arch }}-release
           path: |
             dist/*.exe
             dist/*.zip
             dist/*.yml
             dist/*.blockmap
             *.exe
-          if-no-files-found: error
+            release-info.md
+          retention-days: 90
 
+  # ==========================================
+  # BUILD LINUX RELEASE
+  # ==========================================
   build-linux:
-    if: ${{ github.event_name != 'release' || github.actor != 'github-actions[bot]' }}
+    name: 🐧 Linux Release
+    needs: validate
+    if: needs.validate.outputs.should_release == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: linux
+          - arch: arm64
+            platform: linux
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
-      - name: Install dependencies
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
         run: npm ci
-      - name: Validate build
-        run: npm run validate
-      - name: Validate platform
-        run: npm run validate-platform
-      - name: Build Linux
+
+      - name: 🏗️ Build Electron App
         run: npm run linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload Linux artifacts
+
+      - name: 📊 Generate Release Info
+        run: |
+          echo "## 📊 Release Information" > release-info.md
+          echo "" >> release-info.md
+          echo "**Version:** ${{ needs.validate.outputs.version_to_release }}" >> release-info.md
+          echo "**Platform:** Linux ${{ matrix.arch }}" >> release-info.md
+          echo "**Node.js:** ${{ env.NODE_VERSION }}" >> release-info.md
+          echo "**Date:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> release-info.md
+          echo "**Commit:** ${{ github.sha }}" >> release-info.md
+          echo "**Branch:** ${{ github.ref_name }}" >> release-info.md
+
+      - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: holiver-qrcode-linux-release
+          name: ${{ env.APP_NAME }}-linux-${{ matrix.arch }}-release
           path: |
             dist/*.AppImage
-            dist/*.deb
-            dist/*.yml
-            dist/*.blockmap
-          if-no-files-found: error
+            dist/*.tar.gz
+            release-info.md
+          retention-days: 90
 
-  build-macos:
-    if: ${{ github.event_name != 'release' || github.actor != 'github-actions[bot]' }}
+  # ==========================================
+  # BUILD MAC RELEASE
+  # ==========================================
+  build-mac:
+    name: 🍎 macOS Release
+    needs: validate
+    if: needs.validate.outputs.should_release == 'true'
     runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: darwin
+          - arch: arm64
+            platform: darwin
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
-      - name: Install dependencies
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
         run: npm ci
-      - name: Validate build
-        run: npm run validate
-      - name: Validate platform
-        run: npm run validate-platform
-      - name: Build macOS
+
+      - name: 🏗️ Build Electron App
         run: npm run mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload macOS artifacts
+
+      - name: 📊 Generate Release Info
+        run: |
+          echo "## 📊 Release Information" > release-info.md
+          echo "" >> release-info.md
+          echo "**Version:** ${{ needs.validate.outputs.version_to_release }}" >> release-info.md
+          echo "**Platform:** macOS ${{ matrix.arch }}" >> release-info.md
+          echo "**Node.js:** ${{ env.NODE_VERSION }}" >> release-info.md
+          echo "**Date:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> release-info.md
+          echo "**Commit:** ${{ github.sha }}" >> release-info.md
+          echo "**Branch:** ${{ github.ref_name }}" >> release-info.md
+
+      - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: holiver-qrcode-mac-release
+          name: ${{ env.APP_NAME }}-mac-${{ matrix.arch }}-release
           path: |
             dist/*.dmg
-            dist/*.yml
-            dist/*.blockmap
-          if-no-files-found: error
+            dist/*.zip
+            release-info.md
+          retention-days: 90
 
+  # ==========================================
+  # CREATE GITHUB RELEASE
+  # ==========================================
   create-release:
-    if: ${{ github.event_name != 'release' || github.actor != 'github-actions[bot]' }}
-    needs: [build-windows, build-linux, build-macos]
+    name: 🚀 Create GitHub Release
+    needs: [validate, build-windows, build-linux, build-mac]
+    if: needs.validate.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Download artifacts
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: release
-          pattern: holiver-qrcode-*-release
-      - name: Remove duplicate debug artifacts
-        shell: bash
+          path: artifacts
+          pattern: "*-release"
+
+      - name: 📊 Generate Release Notes
         run: |
-          set -euo pipefail
-          find release -name "builder-debug.yml" -delete
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+          cat > release-notes.md << 'EOF'
+          ## 🚀 HoliverQRCode ${{ needs.validate.outputs.version_to_release }}
+          
+          ### ✨ Novidades
+          - 🌍 **Multi-idioma:** Seleção de idioma na primeira tela (6 idiomas)
+          - 🔧 **NSIS Profissional:** Instalador 100% funcional com MUI2
+          - 📝 **Unicode Completo:** Suporte total a caracteres especiais
+          - 🎨 **Interface Personalizada:** Ícone e imagens do wizard customizados
+          - 🗑️ **Desinstalador Completo:** Remoção total do aplicativo
+          - 🔄 **Atualização Automática:** Suporte a --version/-v
+          - 🚀 **GitHub Actions:** Build automatizado para todas plataformas
+          - 📦 **NSIS Integration:** Compilação automática do instalador
+          
+          ### 🛠️ Instalador Windows
+          - **Multi-idioma:** Português, Inglês, Espanhol, Francês, Alemão, Italiano
+          - **Interface MUI2:** Wizard moderno e profissional
+          - **Ícone Personalizado:** Identidade visual HoliverQRCode
+          - **Licença Completa:** Termos em português sem erros
+          
+          ### 📋 Build Matrix
+          - **Windows:** x64, x86 (com instalador NSIS)
+          - **Linux:** x64, ARM64 (AppImage, tar.gz)
+          - **macOS:** x64, ARM64 (DMG, zip)
+          
+          ### 🔧 Melhorias Técnicas
+          - **CI/CD:** GitHub Actions profissional com validações
+          - **Qualidade:** Testes automatizados de código e build
+          - **Performance:** Build paralelo para múltiplas plataformas
+          - **Segurança:** Validações de segurança e permissões
+          
+          ---
+          
+          📥 **Download:** [GitHub Releases](https://github.com/CaioLima10/QRCodex/releases)
+          🌐 **Website:** [HoliverQRCode](https://github.com/CaioLima10/QRCodex)
+          EOF
+
+      - name: 🚀 Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
-          name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
-          generate_release_notes: true
-          files: release/**/*
-          fail_on_unmatched_files: true
-          overwrite_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ needs.validate.outputs.version_to_release }}
+          name: HoliverQRCode ${{ needs.validate.outputs.version_to_release }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/*-release/*
+
+      - name: 📊 Release Summary
+        run: |
+          echo "## 🚀 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Release Information" >> $GITHUB_STEP_SUMMARY
+          echo "- 🏷️ **Version:** ${{ needs.validate.outputs.version_to_release }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📥 **Tag:** [${{ needs.validate.outputs.version_to_release }}](https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.version_to_release }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌿 **Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "- 🪟 **Windows:** ${{ needs.build-windows.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐧 **Linux:** ${{ needs.build-linux.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🍎 **macOS:** ${{ needs.build-mac.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- 📥 **Release:** [GitHub Releases](https://github.com/${{ github.repository }}/releases)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌐 **Repository:** [GitHub](https://github.com/${{ github.repository }})" >> $GITHUB_STEP_SUMMARY

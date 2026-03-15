@@ -1,6 +1,6 @@
 ; ===================================================
-; Instalador NSIS HoliverQRCode - Solução Definitiva
-; Suporte Unicode completo para português
+; Instalador NSIS HoliverQRCode - Unicode Completo
+; Suporte total para português e múltiplos idiomas
 ; ===================================================
 
 ; --- SUPORE UNICODE ---
@@ -30,9 +30,6 @@ UninstallIcon "app.ico"
 !define MUI_WELCOMEFINISHPAGE_BITMAP "ii1nstaller.bmp"
 !define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH
 
-; --- RESTAURAR TÍTULOS ---
-!define MUI_ABORTWARNING
-
 ; --- PÁGINAS DO INSTALADOR ---
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "license_ansi.txt"
@@ -46,20 +43,17 @@ UninstallIcon "app.ico"
 !insertmacro MUI_UNPAGE_FINISH
 
 ; --- IDIOMAS ---
-!insertmacro MUI_LANGUAGE "PortugueseBR"
+LoadLanguageFile "${NSISDIR}\Contrib\Language files\PortugueseBR.nlf"
 !insertmacro MUI_LANGUAGE "English"
 !insertmacro MUI_LANGUAGE "Spanish"
 !insertmacro MUI_LANGUAGE "French"
 !insertmacro MUI_LANGUAGE "German"
 !insertmacro MUI_LANGUAGE "Italian"
 
-; --- HABILITAR SELEÇÃO DE IDIOMA ---
+; --- IDIOMA PADRÃO ---
 !define MUI_LANGDLL_ALLLANGUAGES
 
-; --- FUNÇÃO DE INICIALIZAÇÃO ---
-Function .onInit
-  !insertmacro MUI_LANGDLL_DISPLAY
-FunctionEnd
+; --- SEÇÃO DE INSTALAÇÃO ---
 Section "HoliverQRCode" SecMain
     SetOutPath "$INSTDIR"
     File /r "dist\*"

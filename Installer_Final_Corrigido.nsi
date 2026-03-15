@@ -1,6 +1,6 @@
 ; ===================================================
-; Instalador NSIS HoliverQRCode - Solução Definitiva
-; Suporte Unicode completo para português
+; Instalador NSIS HoliverQRCode - Versão Final
+; Unicode completo com seleção de idioma
 ; ===================================================
 
 ; --- SUPORE UNICODE ---
@@ -60,6 +60,8 @@ UninstallIcon "app.ico"
 Function .onInit
   !insertmacro MUI_LANGDLL_DISPLAY
 FunctionEnd
+
+; --- SEÇÃO DE INSTALAÇÃO ---
 Section "HoliverQRCode" SecMain
     SetOutPath "$INSTDIR"
     File /r "dist\*"

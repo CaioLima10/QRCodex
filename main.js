@@ -2,6 +2,13 @@
 
 const { app, BrowserWindow, session, systemPreferences } = require("electron");
 const path = require("path");
+const { version } = require('./package.json');
+
+// Verificar flag --version
+if (process.argv.includes('--version') || process.argv.includes('-v')) {
+  console.log(`HoliverQRCode v${version}`);
+  process.exit(0);
+}
 
 const ICON_PATHS = {
   win32: "build/app.ico",

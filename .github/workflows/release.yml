@@ -23,6 +23,10 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci
+      - name: Install NSIS
+        run: |
+          choco install nsis
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: GitHub Actions Validation
         run: npm run github-actions-test
       - name: Validate build
@@ -31,8 +35,8 @@ jobs:
         run: npm run validate-platform
       - name: Build Windows
         run: npm run win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build NSIS Installer
+        run: npm run build-nsis
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -42,6 +46,7 @@ jobs:
             dist/*.zip
             dist/*.yml
             dist/*.blockmap
+            *.exe
           if-no-files-found: error
 
   build-linux:

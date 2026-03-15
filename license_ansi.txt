@@ -1,0 +1,62 @@
+LICENÇA DE USO – HoliverQRCode Generator
+Versão 1.0.1
+
+Copyright (c) 2026 Holiver Core.
+Todos os direitos reservados.
+
+Este software e fornecido "como esta", sem garantias de qualquer tipo, expressas ou implicitas, incluindo, mas nao se limitando a, garantias de comercializacao, adequacao a um proposito especifico ou nao violacao de direitos.
+
+Ao instalar, copiar ou utilizar este software, voce concorda com os termos e condicoes descritos abaixo.
+
+1. Uso Permitido
+
+O usuario esta autorizado a:
+
+- Utilizar o software para geracao de codigos QR para qualquer finalidade.
+- Utilizar o software em ambientes pessoais ou comerciais.
+- Distribuir e utilizar livremente os codigos QR gerados pelo software.
+
+2. Restricoes
+
+Nao e permitido:
+
+- Realizar engenharia reversa, descompilacao ou tentativa de obtencao do codigo-fonte do software.
+- Redistribuir versoes modificadas deste software sem autorizacao previa do autor.
+- Remover ou alterar creditos, avisos de copyright ou identificacao do autor presentes no software.
+
+3. Limitacao de Responsabilidade
+
+Em nenhuma circunstancia os desenvolvedores ou colaboradores serao responsaveis por:
+
+- Perda de dados ou danos indiretos decorrentes do uso do software.
+- Problemas causados pela utilizacao dos codigos QR gerados.
+- Qualquer dano resultante do uso ou da incapacidade de uso deste software.
+
+O uso deste software e de inteira responsabilidade do usuario.
+
+4. Suporte e Atualizacoes
+
+O suporte tecnico podera ser disponibilizado atraves do repositorio oficial do projeto no GitHub.
+Atualizacoes poderao ser fornecidas periodicamente, conforme disponibilidade do desenvolvedor.
+
+5. Privacidade
+
+Este software respeita a privacidade do usuario.
+
+- Nenhum dado pessoal e coletado.
+- Todo o processamento ocorre localmente no dispositivo do usuario.
+- Nenhuma informacao e enviada para servidores externos.
+
+6. Aceitacao da Licenca
+
+Ao prosseguir com a instalacao ou uso do software, voce declara que leu, compreendeu e concorda com todos os termos desta licenca.
+
+Mais informacoes e atualizacoes do projeto:
+
+https://github.com/CaioLima10/QRCodex
+
+Desenvolvido por
+Caio Lima de Souza
+
+Contato
+Email: Caioonepiece70@gmail.com

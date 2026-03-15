@@ -67,17 +67,30 @@ Section "HoliverQRCode" SecMain
     ; Criar desinstalador
     WriteUninstaller "$INSTDIR\Uninstall.exe"
     
+    ; Criar atalhos
+    CreateShortCut "$DESKTOP\HoliverQRCode.lnk" "$INSTDIR\HoliverQRCode.exe" "" "$INSTDIR\HoliverQRCode.exe" 0
+    CreateShortCut "$SMPROGRAMS\HoliverQRCode.lnk" "$INSTDIR\HoliverQRCode.exe" "" "$INSTDIR\HoliverQRCode.exe" 0
+    CreateShortCut "$SMPROGRAMS\Desinstalar HoliverQRCode.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
+    
     ; Registros do Windows
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayName" "HoliverQRCode"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "UninstallString" "$INSTDIR\Uninstall.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayIcon" "$INSTDIR\HoliverQRCode.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "Publisher" "Holiver Core"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "1.0.1"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "2.0.2"
 SectionEnd
 
 ; --- SEÇÃO DE DESINSTALAÇÃO ---
 Section "Uninstall"
+    ; Remover atalhos
+    Delete "$DESKTOP\HoliverQRCode.lnk"
+    Delete "$SMPROGRAMS\HoliverQRCode.lnk"
+    Delete "$SMPROGRAMS\Desinstalar HoliverQRCode.lnk"
+    
+    ; Remover arquivos
     Delete "$INSTDIR\Uninstall.exe"
     RMDir /r "$INSTDIR"
+    
+    ; Remover registro
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode"
 SectionEnd

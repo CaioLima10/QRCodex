@@ -24,7 +24,7 @@ class FrontendLanguageManager {
     loadFallbackTranslations() {
         this.translations = {
             'pt-BR': {
-                'app_title': 'HoliverQRCode v2.1.0',
+                'app_title': 'HoliverQRCode v2.1.1',
                 loading: 'Carregando...',
                 generating: 'Gerando QR Code...',
                 success: 'QR Code gerado com sucesso!',

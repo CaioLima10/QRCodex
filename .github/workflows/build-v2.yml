@@ -107,7 +107,12 @@ jobs:
           echo "NSIS Version: $nsisVersion"
 
       - name: 🏗️ Build Electron App
-        run: npm run win
+        run: |
+          if ('${{ matrix.arch }}' -eq 'x64') {
+            npm run win
+          } else {
+            npm run win-x86
+          }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -168,7 +173,12 @@ jobs:
         run: npm ci
 
       - name: 🏗️ Build Electron App
-        run: npm run linux
+        run: |
+          if [ "${{ matrix.arch }}" = "x64" ]; then
+            npm run linux
+          else
+            npm run linux-arm
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -224,11 +234,11 @@ jobs:
 
       - name: 🏗️ Build Electron App
         run: |
-          if ('${{ matrix.arch }}' -eq 'x64') {
-            npm run win
-          } else {
-            npm run win-x86
-          }
+          if [ "${{ matrix.arch }}" = "x64" ]; then
+            npm run mac
+          else
+            npm run mac-arm
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

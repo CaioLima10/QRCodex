@@ -118,20 +118,26 @@ jobs:
 
       - name: 🔍 Verify Electron Build
         run: |
-          $electronBuild = Get-ChildItem dist -Recurse -Filter "HoliverQRCode.exe" -ErrorAction SilentlyContinue
-          if ($electronBuild) {
+          if (Test-Path "dist\win-unpacked\HoliverQRCode.exe") {
             Write-Host "✅ Electron build verified - HoliverQRCode.exe found"
-            Write-Host "📁 Found at: $($electronBuild.FullName)"
-            Write-Host "📊 Size: $([math]::Round($electronBuild.Length / 1MB, 2)) MB"
+            $exeInfo = Get-Item "dist\win-unpacked\HoliverQRCode.exe"
+            Write-Host "📁 Found at: $($exeInfo.FullName)"
+            Write-Host "📊 Size: $([math]::Round($exeInfo.Length / 1MB, 2)) MB"
             
-            # Mostrar conteúdo do diretório pai
-            $parentDir = $electronBuild.Directory
+            # Mostrar conteúdo do diretório
             Write-Host "📂 Directory contents:"
-            Get-ChildItem $parentDir | Select-Object Name, @{Name="Size(MB)"; Expression={[math]::Round($_.Length / 1MB, 2)}}
+            Get-ChildItem "dist\win-unpacked" | Select-Object Name, @{Name="Size(MB)"; Expression={[math]::Round($_.Length / 1MB, 2)}}
           } else {
-            Write-Host "❌ Electron build failed - HoliverQRCode.exe not found"
+            Write-Host "❌ Electron build failed - dist\win-unpacked\HoliverQRCode.exe not found"
             Write-Host "📁 Current dist contents:"
             Get-ChildItem dist -ErrorAction SilentlyContinue | Select-Object Name, @{Name="Size(MB)"; Expression={[math]::Round($_.Length / 1MB, 2)}}
+            
+            # Verificar se existem outros diretórios win-*
+            $winDirs = Get-ChildItem dist -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "win-*" -and $_.PSIsContainer }
+            if ($winDirs) {
+              Write-Host "🔍 Found alternative win directories:"
+              $winDirs | ForEach-Object { Write-Host "  - $($_.Name)" }
+            }
             exit 1
           }
 

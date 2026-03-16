@@ -14,7 +14,7 @@ Unicode true
 !define MUI_UNICON "app.ico"
 
 ; --- DEFINIÇÃO DO DIRETÓRIO DE BUILD ---
-!define APP_BUILD_DIR "dist\win-unpacked"
+!define APP_BUILD_DIR "dist\HoliverQRCode-win32-x64"
 
 ; --- CONFIGURAÇÕES DO INSTALADOR ---
 Name "HoliverQRCode"
@@ -100,7 +100,7 @@ Section "HoliverQRCode" SecMain
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "UninstallString" "$INSTDIR\Uninstall.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayIcon" "$INSTDIR\HoliverQRCode.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "Publisher" "Holiver Core"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "2.1.4"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "2.1.6"
 SectionEnd
 
 ; --- SEÇÃO DE DESINSTALAÇÃO ---

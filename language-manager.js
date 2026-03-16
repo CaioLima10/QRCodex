@@ -194,10 +194,10 @@ class LanguageManager {
         try {
             // Tentar ler o idioma do registro do Windows
             const { execSync } = require('child_process');
-            
+
             if (process.platform === 'win32') {
                 try {
-                    const regQuery = execSync('reg query "HKLM\\Software\\HoliverQRCode" /v Language', { encoding: 'utf8' });
+                    const regQuery = execSync('reg query "HKLM\\Software\\HoliverQRCode" /v Language', { encoding: 'cp850' });
                     const match = regQuery.match(/Language\s+REG_SZ\s+(.+)/);
                     if (match && match[1]) {
                         const langCode = this.normalizeLanguageCode(match[1].trim());
@@ -208,11 +208,11 @@ class LanguageManager {
                     console.log('📝 Idioma do instalador não encontrado, usando sistema');
                 }
             }
-            
+
             // Fallback para idioma do sistema
             const systemLang = app.getLocale();
             return this.normalizeLanguageCode(systemLang);
-            
+
         } catch (error) {
             console.log('❌ Erro ao detectar idioma, usando padrão');
             return this.defaultLanguage;
@@ -237,7 +237,7 @@ class LanguageManager {
             'it': 'it-IT',
             'it-IT': 'it-IT'
         };
-        
+
         return langMap[langCode] || this.defaultLanguage;
     }
 
@@ -245,7 +245,7 @@ class LanguageManager {
     initialize() {
         this.currentLanguage = this.getInstallerLanguage();
         console.log(`🌍 Idioma inicializado: ${this.currentLanguage} (${this.supportedLanguages[this.currentLanguage]})`);
-        
+
         // Salvar preferência
         this.saveLanguagePreference();
     }
@@ -255,15 +255,15 @@ class LanguageManager {
         try {
             const userDataPath = app.getPath('userData');
             const configPath = path.join(userDataPath, 'config.json');
-            
+
             let config = {};
             if (fs.existsSync(configPath)) {
                 config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
             }
-            
+
             config.language = this.currentLanguage;
             fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-            
+
         } catch (error) {
             console.log('❌ Erro ao salvar preferência de idioma');
         }
@@ -274,7 +274,7 @@ class LanguageManager {
         try {
             const userDataPath = app.getPath('userData');
             const configPath = path.join(userDataPath, 'config.json');
-            
+
             if (fs.existsSync(configPath)) {
                 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
                 if (config.language && this.supportedLanguages[config.language]) {

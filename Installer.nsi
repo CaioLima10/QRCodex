@@ -71,7 +71,7 @@ Function .onInit
 FunctionEnd
 Section "HoliverQRCode" SecMain
     SetOutPath "$INSTDIR"
-    File /r "dist\*"
+    File /r "dist\win-unpacked\*"
     
     ; Criar desinstalador
     WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -86,7 +86,7 @@ Section "HoliverQRCode" SecMain
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "UninstallString" "$INSTDIR\Uninstall.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayIcon" "$INSTDIR\HoliverQRCode.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "Publisher" "Holiver Core"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "2.0.6"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "2.0.7"
 SectionEnd
 
 ; --- SEÇÃO DE DESINSTALAÇÃO ---
@@ -96,10 +96,11 @@ Section "Uninstall"
     Delete "$SMPROGRAMS\HoliverQRCode.lnk"
     Delete "$SMPROGRAMS\Desinstalar HoliverQRCode.lnk"
     
-    ; Remover arquivos
-    Delete "$INSTDIR\Uninstall.exe"
-    RMDir /r "$INSTDIR"
+    ; Remover arquivos do diretório de instalação
+    RMDir /r "$INSTDIR\*.*"
+    RMDir "$INSTDIR"
     
-    ; Remover registro
+    ; Remover registros do Windows
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode"
+    DeleteRegKey HKLM "Software\HoliverQRCode"
 SectionEnd

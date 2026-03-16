@@ -1,7 +1,7 @@
 {
   "name": "holiver-qrcode",
   "productName": "HoliverQRCode",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "QR Code Generator",
   "author": "Caio",
   "main": "main.js",
@@ -72,7 +72,6 @@
     ],
     "win": {
       "target": [
-        "nsis",
         "portable",
         "zip"
       ],
@@ -92,18 +91,6 @@
       "icon": "build/app.icns",
       "category": "public.app-category.productivity",
       "darkModeSupport": true
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "HoliverQRCode",
-      "uninstallDisplayName": "HoliverQRCode",
-      "deleteAppDataOnUninstall": true,
-      "runAfterFinish": true,
-      "perMachine": false
     }
   }
 }

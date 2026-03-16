@@ -1,7 +1,7 @@
 {
   "name": "holiver-qrcode",
   "productName": "HoliverQRCode",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "QR Code Generator",
   "author": "Caio",
   "main": "main.js",
@@ -20,6 +20,7 @@
     "test-install": "node scripts/test-install.js",
     "test-uninstall": "node scripts/test-uninstall.js",
     "test-full-install": "node scripts/test-full-install.js",
+    "build": "npm run build-nsis",
     "build-nsis": "node scripts/build-nsis.js",
     "win": "electron-builder --win --x64 --publish never",
     "win-x86": "electron-builder --win --ia32 --publish never",

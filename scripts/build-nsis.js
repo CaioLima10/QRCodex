@@ -20,10 +20,15 @@ if (!fs.existsSync(makensisPath)) {
     process.exit(1);
 }
 
-// Verificar se o diretório dist/win-unpacked existe
-const winUnpackedPath = path.join(__dirname, '..', 'dist', 'win-unpacked');
-if (!fs.existsSync(winUnpackedPath)) {
-    console.error('❌ dist/win-unpacked directory not found!');
+// Verificar se o diretório dist/win-*-unpacked existe
+const distPath = path.join(__dirname, '..', 'dist');
+const winUnpackedPattern = path.join(distPath, 'win-*-unpacked');
+const winUnpackedDirs = fs.readdirSync(distPath)
+    .filter(dir => dir.startsWith('win-') && dir.endsWith('-unpacked'))
+    .map(dir => path.join(distPath, dir));
+
+if (winUnpackedDirs.length === 0) {
+    console.error('❌ No win-*-unpacked directory found in dist!');
     console.log('🔄 Attempting to generate Electron build...');
 
     try {
@@ -31,12 +36,17 @@ if (!fs.existsSync(winUnpackedPath)) {
         console.log('🏗️ Running electron-builder...');
         execSync('npm run win', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
 
-        // Verificar novamente se o diretório foi criado
-        if (!fs.existsSync(winUnpackedPath)) {
-            console.error('❌ Failed to generate dist/win-unpacked directory!');
+        // Verificar novamente
+        const newDirs = fs.readdirSync(distPath)
+            .filter(dir => dir.startsWith('win-') && dir.endsWith('-unpacked'))
+            .map(dir => path.join(distPath, dir));
+
+        if (newDirs.length === 0) {
+            console.error('❌ Failed to generate win-*-unpacked directory!');
             process.exit(1);
         }
 
+        winUnpackedDirs.push(...newDirs);
         console.log('✅ Electron build generated successfully!');
     } catch (error) {
         console.error('❌ Failed to generate Electron build:', error.message);
@@ -44,11 +54,18 @@ if (!fs.existsSync(winUnpackedPath)) {
     }
 }
 
+// Usar o primeiro diretório encontrado
+const winUnpackedPath = winUnpackedDirs[0];
+console.log(`📁 Using directory: ${winUnpackedPath}`);
+
 // Verificar se o executável principal existe
 const exePath = path.join(winUnpackedPath, 'HoliverQRCode.exe');
 if (!fs.existsSync(exePath)) {
-    console.error('❌ HoliverQRCode.exe not found in dist/win-unpacked!');
-    console.error('💡 Please run "npm run win" first to build the Electron app.');
+    console.error(`❌ HoliverQRCode.exe not found in ${winUnpackedPath}!`);
+    console.log('� Directory contents:');
+    fs.readdirSync(winUnpackedPath).forEach(file => {
+        console.log(`  - ${file}`);
+    });
     process.exit(1);
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "holiver-qrcode",
   "productName": "HoliverQRCode",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "QR Code Generator",
   "author": "Caio",
   "main": "main.js",
@@ -18,12 +18,14 @@
     "ultimate-test": "node scripts/ultimate-test.js",
     "test-final": "node scripts/final-validation.js",
     "prebuild": "npm run code-quality-test",
-    "build": "node scripts/run-electron-builder.js",
     "build-nsis": "node scripts/build-nsis.js",
-    "win": "node scripts/run-electron-builder.js --win",
-    "linux": "node scripts/run-electron-builder.js --linux",
-    "mac": "node scripts/run-electron-builder.js --mac",
-    "dist": "node scripts/run-electron-builder.js --dir",
+    "win": "electron-builder --win --x64 --publish never",
+    "win-x86": "electron-builder --win --ia32 --publish never",
+    "linux": "electron-builder --linux --x64 --publish never",
+    "linux-arm": "electron-builder --linux --arm64 --publish never",
+    "mac": "electron-builder --mac --x64 --publish never",
+    "mac-arm": "electron-builder --mac --arm64 --publish never",
+    "build-all": "electron-builder --win --linux --mac --publish never",
     "install:app": "node installer/install.js",
     "install:verify": "node installer/verify-install.js",
     "install:status": "node installer/verify-install.js",
@@ -52,13 +54,6 @@
       "buildResources": "build",
       "output": "dist"
     },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "CaioLima10",
-        "repo": "QRCodex"
-      }
-    ],
     "files": [
       "main.js",
       "index.html",

@@ -223,7 +223,12 @@ jobs:
         run: npm ci
 
       - name: 🏗️ Build Electron App
-        run: npm run mac
+        run: |
+          if ('${{ matrix.arch }}' -eq 'x64') {
+            npm run win
+          } else {
+            npm run win-x86
+          }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

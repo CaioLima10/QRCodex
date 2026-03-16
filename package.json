@@ -1,7 +1,7 @@
 {
   "name": "holiver-qrcode",
   "productName": "HoliverQRCode",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "QR Code Generator",
   "author": "Caio",
   "main": "main.js",

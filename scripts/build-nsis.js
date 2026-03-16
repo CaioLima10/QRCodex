@@ -20,11 +20,45 @@ if (!fs.existsSync(makensisPath)) {
     process.exit(1);
 }
 
+// Verificar se o diretório dist/win-unpacked existe
+const winUnpackedPath = path.join(__dirname, '..', 'dist', 'win-unpacked');
+if (!fs.existsSync(winUnpackedPath)) {
+    console.error('❌ dist/win-unpacked directory not found!');
+    console.log('🔄 Attempting to generate Electron build...');
+
+    try {
+        // Tentar gerar o build do Electron
+        console.log('🏗️ Running electron-builder...');
+        execSync('npm run win', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
+
+        // Verificar novamente se o diretório foi criado
+        if (!fs.existsSync(winUnpackedPath)) {
+            console.error('❌ Failed to generate dist/win-unpacked directory!');
+            process.exit(1);
+        }
+
+        console.log('✅ Electron build generated successfully!');
+    } catch (error) {
+        console.error('❌ Failed to generate Electron build:', error.message);
+        process.exit(1);
+    }
+}
+
+// Verificar se o executável principal existe
+const exePath = path.join(winUnpackedPath, 'HoliverQRCode.exe');
+if (!fs.existsSync(exePath)) {
+    console.error('❌ HoliverQRCode.exe not found in dist/win-unpacked!');
+    console.error('💡 Please run "npm run win" first to build the Electron app.');
+    process.exit(1);
+}
+
+console.log('✅ Electron build found in dist/win-unpacked');
+
 try {
     // Compilar o instalador
     console.log('📦 Compiling Installer.nsi...');
     execSync(`"${makensisPath}" "${installerPath}"`, { stdio: 'inherit' });
-    
+
     // Verificar se o instalador foi criado
     const installerExe = path.join(__dirname, '..', 'HoliverQRCode_Installer.exe');
     if (fs.existsSync(installerExe)) {
@@ -36,7 +70,7 @@ try {
         console.error('❌ Installer executable not found after build!');
         process.exit(1);
     }
-    
+
 } catch (error) {
     console.error('❌ Build failed:', error.message);
     process.exit(1);

@@ -116,10 +116,27 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 📦 Build NSIS Installer
+      - name: � Verify Electron Build
+        run: |
+          if (Test-Path "dist\win-unpacked\HoliverQRCode.exe") {
+            Write-Host "✅ Electron build verified - HoliverQRCode.exe found"
+            Get-ChildItem "dist\win-unpacked" | Select-Object Name, @{Name="Size(MB)"; Expression={[math]::Round($_.Length / 1MB, 2)}}
+          } else {
+            Write-Host "❌ Electron build failed - dist/win-unpacked not found"
+            Write-Host "📁 Current dist contents:"
+            Get-ChildItem "dist" -ErrorAction SilentlyContinue | Select-Object Name, @{Name="Size(MB)"; Expression={[math]::Round($_.Length / 1MB, 2)}}
+            exit 1
+          }
+
+      - name: �📦 Build NSIS Installer
         run: |
           npm run build-nsis
-          echo "✅ NSIS Installer built successfully!"
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ NSIS Installer built successfully!"
+          } else {
+            Write-Host "❌ NSIS Installer build failed!"
+            exit 1
+          }
 
       - name: 📊 Generate Build Info
         run: |

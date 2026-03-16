@@ -24,7 +24,7 @@ class LanguageManager {
     loadTranslations() {
         const translations = {
             'pt-BR': {
-                app_title: 'Sublime CIA QRCode Generator',
+                app_title: 'HoliverQRCode',
                 loading: 'Carregando...',
                 generating: 'Gerando QR Code...',
                 success: 'QR Code gerado com sucesso!',
@@ -51,7 +51,7 @@ class LanguageManager {
                 sms: 'SMS'
             },
             'en-US': {
-                app_title: 'Sublime CIA QRCode Generator',
+                app_title: 'HoliverQRCode',
                 loading: 'Loading...',
                 generating: 'Generating QR Code...',
                 success: 'QR Code generated successfully!',
@@ -78,7 +78,7 @@ class LanguageManager {
                 sms: 'SMS'
             },
             'es-ES': {
-                app_title: 'Sublime CIA QRCode Generator',
+                app_title: 'HoliverQRCode',
                 loading: 'Cargando...',
                 generating: 'Generando QR Code...',
                 success: '¡QR Code generado con éxito!',
@@ -105,7 +105,7 @@ class LanguageManager {
                 sms: 'SMS'
             },
             'fr-FR': {
-                app_title: 'Sublime CIA QRCode Generator',
+                app_title: 'HoliverQRCode',
                 loading: 'Chargement...',
                 generating: 'Génération du QR Code...',
                 success: 'QR Code généré avec succès!',
@@ -132,7 +132,7 @@ class LanguageManager {
                 sms: 'SMS'
             },
             'de-DE': {
-                app_title: 'Sublime CIA QRCode Generator',
+                app_title: 'HoliverQRCode',
                 loading: 'Laden...',
                 generating: 'QR Code generieren...',
                 success: 'QR Code erfolgreich generiert!',
@@ -159,7 +159,7 @@ class LanguageManager {
                 sms: 'SMS'
             },
             'it-IT': {
-                app_title: 'Sublime CIA QRCode Generator',
+                app_title: 'HoliverQRCode',
                 loading: 'Caricamento...',
                 generating: 'Generazione QR Code...',
                 success: 'QR Code generato con successo!',

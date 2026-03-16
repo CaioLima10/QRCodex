@@ -24,7 +24,7 @@ class FrontendLanguageManager {
     loadFallbackTranslations() {
         this.translations = {
             'pt-BR': {
-                app_title: 'Sublime CIA QRCode Generator v2.0.2 by: Caio Lima de Souza',
+                'app_title': 'HoliverQRCode v2.0.8',
                 loading: 'Carregando...',
                 generating: 'Gerando QR Code...',
                 success: 'QR Code gerado com sucesso!',
@@ -66,19 +66,19 @@ class FrontendLanguageManager {
     updateUI() {
         // Atualizar título da página
         document.title = this.t('app_title');
-        
+
         // Atualizar elementos com data-translate
         document.querySelectorAll('[data-translate]').forEach(element => {
             const key = element.getAttribute('data-translate');
             element.textContent = this.t(key);
         });
-        
+
         // Atualizar placeholders
         document.querySelectorAll('[data-placeholder-translate]').forEach(element => {
             const key = element.getAttribute('data-placeholder-translate');
             element.placeholder = this.t(key);
         });
-        
+
         // Disparar evento de idioma atualizado
         window.dispatchEvent(new CustomEvent('languageChanged', {
             detail: { language: this.currentLanguage }
@@ -95,10 +95,10 @@ class FrontendLanguageManager {
         if (this.translations[langCode]) {
             this.currentLanguage = langCode;
             this.updateUI();
-            
+
             // Salvar preferência
             localStorage.setItem('preferredLanguage', langCode);
-            
+
             // Notificar backend
             if (window.electronAPI && window.electronAPI.setLanguage) {
                 window.electronAPI.setLanguage(langCode);

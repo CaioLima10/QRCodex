@@ -121,13 +121,26 @@ jobs:
           Write-Host "📁 Checking dist contents:"
           Get-ChildItem dist -ErrorAction SilentlyContinue | Select-Object Name, @{Name="Size(MB)"; Expression={[math]::Round($_.Length / 1MB, 2)}}
           
-          # Verificar se o instalador NSIS foi criado
-          $nsisInstaller = Get-ChildItem dist -Filter "*Setup*.exe" -ErrorAction SilentlyContinue
-          if ($nsisInstaller) {
-            Write-Host "✅ NSIS Installer found: $($nsisInstaller.Name)"
-            Write-Host "📊 Size: $([math]::Round($nsisInstaller.Length / 1MB, 2)) MB"
-          } else {
-            Write-Host "❌ NSIS Installer not found"
+          # Verificar se o instalador foi criado (vários padrões possíveis)
+          $installerFound = $false
+          $possibleNames = @("*Setup*.exe", "*Installer*.exe", "HoliverQRCode*.exe")
+          
+          foreach ($name in $possibleNames) {
+            $installer = Get-ChildItem dist -Filter $name -ErrorAction SilentlyContinue
+            if ($installer) {
+              Write-Host "✅ Installer found: $($installer.Name) (pattern: $name)"
+              Write-Host "📊 Size: $([math]::Round($installer.Length / 1MB, 2)) MB"
+              $installerFound = $true
+              break
+            }
+          }
+          
+          if (-not $installerFound) {
+            Write-Host "❌ No installer found with patterns: $($possibleNames -join ', ')"
+            Write-Host "📁 Available files in dist:"
+            Get-ChildItem dist -ErrorAction SilentlyContinue | ForEach-Object { 
+              Write-Host "  - $($_.Name) ($([math]::Round($_.Length / 1MB, 2)) MB)"
+            }
             exit 1
           }
 

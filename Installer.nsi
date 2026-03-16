@@ -13,11 +13,13 @@ Unicode true
 !define MUI_ICON "app.ico"
 !define MUI_UNICON "app.ico"
 
-; --- CONFIGURAÇÕES BÁSICAS ---
+; --- CONFIGURAÇÕES DO INSTALADOR ---
 Name "HoliverQRCode"
 OutFile "HoliverQRCode_Installer.exe"
 InstallDir "$PROGRAMFILES\HoliverQRCode"
 RequestExecutionLevel admin
+ShowInstDetails show
+ShowUnInstDetails show
 
 ; --- ÍCONE DO INSTALADOR (DEPOIS DAS DEFINIÇÕES) ---
 Icon "app.ico"
@@ -76,17 +78,26 @@ Section "HoliverQRCode" SecMain
     ; Criar desinstalador
     WriteUninstaller "$INSTDIR\Uninstall.exe"
     
-    ; Criar atalhos
-    CreateShortCut "$DESKTOP\HoliverQRCode.lnk" "$INSTDIR\HoliverQRCode.exe" "" "$INSTDIR\HoliverQRCode.exe" 0
-    CreateShortCut "$SMPROGRAMS\HoliverQRCode.lnk" "$INSTDIR\HoliverQRCode.exe" "" "$INSTDIR\HoliverQRCode.exe" 0
-    CreateShortCut "$SMPROGRAMS\Desinstalar HoliverQRCode.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
+    ; Verificar se os arquivos foram instalados corretamente
+    IfFileExists "$INSTDIR\HoliverQRCode.exe" 0 +3
+        DetailPrint "✅ Arquivos do aplicativo instalados com sucesso!"
+        
+        ; Criar atalhos apenas se a instalação foi bem-sucedida
+        CreateShortCut "$DESKTOP\HoliverQRCode.lnk" "$INSTDIR\HoliverQRCode.exe" "" "$INSTDIR\HoliverQRCode.exe" 0
+        CreateShortCut "$SMPROGRAMS\HoliverQRCode.lnk" "$INSTDIR\HoliverQRCode.exe" "" "$INSTDIR\HoliverQRCode.exe" 0
+        CreateShortCut "$SMPROGRAMS\Desinstalar HoliverQRCode.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
+        
+        DetailPrint "✅ Atalhos criados no Desktop e Menu Iniciar!"
+        Goto +2
+    DetailPrint "❌ Erro: Arquivos do aplicativo não foram encontrados!"
+    Abort "Instalação falhou. Tente novamente."
     
     ; Registros do Windows
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayName" "HoliverQRCode"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "UninstallString" "$INSTDIR\Uninstall.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayIcon" "$INSTDIR\HoliverQRCode.exe"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "Publisher" "Holiver Core"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "2.0.9"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HoliverQRCode" "DisplayVersion" "2.1.0"
 SectionEnd
 
 ; --- SEÇÃO DE DESINSTALAÇÃO ---

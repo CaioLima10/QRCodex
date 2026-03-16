@@ -20,12 +20,22 @@ if (!fs.existsSync(makensisPath)) {
     process.exit(1);
 }
 
-// Verificar se o diretório dist/HoliverQRCode-win32-x64 existe
+// Verificar se o diretório dist/win-unpacked ou HoliverQRCode-win32-x64 existe
 const distPath = path.join(__dirname, '..', 'dist');
-const winUnpackedPath = path.join(distPath, 'HoliverQRCode-win32-x64');
+const possibleDirs = ['win-unpacked', 'HoliverQRCode-win32-x64'];
+let winUnpackedPath = null;
 
-if (!fs.existsSync(winUnpackedPath)) {
-    console.error('❌ HoliverQRCode-win32-x64 directory not found!');
+for (const dir of possibleDirs) {
+    const testPath = path.join(distPath, dir);
+    if (fs.existsSync(testPath)) {
+        winUnpackedPath = testPath;
+        console.log(`📁 Found directory: ${dir}`);
+        break;
+    }
+}
+
+if (!winUnpackedPath) {
+    console.error('❌ No Electron build directory found!');
     console.log('🔄 Attempting to generate Electron build...');
 
     try {
@@ -34,22 +44,40 @@ if (!fs.existsSync(winUnpackedPath)) {
         execSync('npx electron-packager . HoliverQRCode --platform=win32 --arch=x64 --out=dist --overwrite', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
 
         // Verificar novamente se o diretório foi criado
-        if (!fs.existsSync(winUnpackedPath)) {
-            console.error('❌ Failed to generate HoliverQRCode-win32-x64 directory!');
-            process.exit(1);
+        for (const dir of possibleDirs) {
+            const testPath = path.join(distPath, dir);
+            if (fs.existsSync(testPath)) {
+                winUnpackedPath = testPath;
+                console.log(`✅ Electron build generated: ${dir}`);
+                break;
+            }
         }
 
-        console.log('✅ Electron build generated successfully!');
+        if (!winUnpackedPath) {
+            console.error('❌ Failed to generate Electron build directory!');
+            process.exit(1);
+        }
     } catch (error) {
         console.error('❌ Failed to generate Electron build:', error.message);
         process.exit(1);
     }
 }
 
-// Verificar se o executável principal existe
-const exePath = path.join(winUnpackedPath, 'HoliverQRCode.exe');
-if (!fs.existsSync(exePath)) {
-    console.error(`❌ HoliverQRCode.exe not found in ${winUnpackedPath}!`);
+// Verificar se o executável principal existe (electron.exe ou HoliverQRCode.exe)
+const exePath1 = path.join(winUnpackedPath, 'electron.exe');
+const exePath2 = path.join(winUnpackedPath, 'HoliverQRCode.exe');
+
+let exePath = null;
+if (fs.existsSync(exePath1)) {
+    exePath = exePath1;
+    console.log(`✅ Found electron.exe in ${winUnpackedPath}`);
+} else if (fs.existsSync(exePath2)) {
+    exePath = exePath2;
+    console.log(`✅ Found HoliverQRCode.exe in ${winUnpackedPath}`);
+}
+
+if (!exePath) {
+    console.error(`❌ No executable found in ${winUnpackedPath}!`);
     console.log('📁 Directory contents:');
     fs.readdirSync(winUnpackedPath).forEach(file => {
         console.log(`  - ${file}`);
